@@ -1,6 +1,6 @@
 // this file is responsible for searching the database for relevant chunks based on the user's query. It uses the OpenAI API to create an embedding of the user's query and then performs a semantic search in the database to find the most relevant chunks.
 import OpenAI from 'openai';
-import prisma from './prisma/prisma.js';
+import prisma from './lib/prisma.js';
 
 const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',

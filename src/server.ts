@@ -3,7 +3,7 @@
 import express from 'express'
 import { getContext } from './rag/getContext.js'
 import { randomUUID } from 'crypto';
-import prisma from './prisma/prisma.js'
+import prisma from './lib/prisma.js'
 // this is the prisma client that we use to communicate with the database
 // it allows us to create, read, update and delete data from the database such as findMany, findUnique, create, update, delete,createMany, deleteMany, updateMany, etc.
 import cors from 'cors';

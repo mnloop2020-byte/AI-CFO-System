@@ -1,9 +1,9 @@
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 import 'dotenv/config';
-import { splitTextIntoChunks } from './chunks/chunk';
+import { splitTextIntoChunks } from './chunks/chunk.js';
 import OpenAI from 'openai';
-import prisma from './prisma/prisma.js';
+import prisma from './lib/prisma.js';
 
 const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',

@@ -11,7 +11,7 @@
 import llm from "./llm.js";
 import  { SYSTEM_PROMPT , buildUserPrompt } from "./prompt.js"; // استدعاء الـ SYSTEM_PROMPT والقالب
 import { getContext } from "../rag/getContext.js";
-import prisma from "../prisma/prisma.js";
+import prisma from "../lib/prisma.js";
 import promptSync from "prompt-sync";
 
 // تفعيل مكتبة prompt-sync مع خاصية sigint للسماح بإنهاء البرنامج بـ Ctrl+C

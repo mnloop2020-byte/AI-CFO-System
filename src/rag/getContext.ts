@@ -1,5 +1,5 @@
 import { createEmbedding } from "../ai/embedding.js";
-import prisma from "../prisma/prisma.js";
+import prisma from "../lib/prisma.js";
 // We import prisma because we need it to use findMany() and createMany().
 //  Without Prisma, we cannot query the database.
 
