@@ -25,7 +25,6 @@ const response = await llm.embeddings.create({
 
 const embedding = response.data[0].embedding 
 // here in this line we gonna get only the vectors 
-console.log(embedding);
 return embedding;
 // خذ هذه القيمة وأرجعها للشخص الذي استدعى الدالة
   
