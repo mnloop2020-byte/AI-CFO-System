@@ -1,26 +1,12 @@
 import express from 'express'
 import cors from 'cors'
+import healthRoutes from './routes/health.routes.js'
 
 const app = express()
 
 app.use(cors())
 app.use(express.json())
 
-// ======================
-// HEALTH ROUTE
-// ======================
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' })
-})
-
-// ======================
-// ABOUT ROUTE
-// ======================
-app.get('/about', (req, res) => {
-  res.json({
-    project: 'AI CFO System',
-    version: '1.0',
-  })
-})
+app.use(healthRoutes)
 
 export default app
