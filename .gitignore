@@ -1,5 +1,12 @@
-node_modules/
-.next/
-.npm-cache/
-dist/
+# Environment files
 .env
+
+# Node.js
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+backend-python/.venv/
+backend-python/venv/
+backend-python/**/__pycache__/
