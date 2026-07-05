@@ -1,3 +1,5 @@
-def get_context(query: str) -> list[str]:
-    # Placeholder for context retrieval from documents or database.
-    return [query]
+def get_context(user_message: str) -> str:
+    return "No external financial context is available yet."
+
+
+# Note: This file will later retrieve RAG context related to the user question.

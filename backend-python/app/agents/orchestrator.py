@@ -1,7 +1,8 @@
 from typing import Literal
-
+from app.rag.get_context import get_context
 from app.ai.llm import get_llm_client
 from app.config.settings import LLM_MODEL
+from app.ai.prompts import SYSTEM_PROMPT
 
 AgentName = Literal[
     "sales",
@@ -144,11 +145,12 @@ def get_agent_instruction(agent_name: AgentName) -> str:
 def run_orchestrator(user_message: str) -> str:
     selected_agent = select_agent(user_message)
     agent_instruction = get_agent_instruction(selected_agent)
-
+    context_text = get_context(user_message)
     print("==============================")
     print("ORCHESTRATOR CALLED")
     print("USER MESSAGE:", user_message)
     print("SELECTED AGENT:", selected_agent)
+    print("CONTEXT TEXT:", context_text)
     print("==============================")
 
     client = get_llm_client()
@@ -158,16 +160,18 @@ def run_orchestrator(user_message: str) -> str:
         messages=[
             {
                 "role": "system",
-                "content": f"""
-You are the AI CFO System Orchestrator.
+             "content": f"""
+{SYSTEM_PROMPT}
+
+You are now acting as the Orchestrator.
 
 Selected agent: {selected_agent}
 
 Agent instruction:
 {agent_instruction}
 
-Answer clearly and practically.
-If there is not enough financial data yet, explain what data is needed.
+Financial context:
+{context_text}
 """,
             },
             {
