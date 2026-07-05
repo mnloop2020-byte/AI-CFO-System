@@ -1,8 +1,10 @@
 from typing import Literal
-from app.rag.get_context import get_context
+
 from app.ai.llm import get_llm_client
-from app.config.settings import LLM_MODEL
 from app.ai.prompts import SYSTEM_PROMPT
+from app.config.settings import LLM_MODEL
+from app.rag.get_context import get_context
+from app.schemas.chat_schema import ChatMessage
 
 AgentName = Literal[
     "sales",
@@ -142,15 +144,26 @@ def get_agent_instruction(agent_name: AgentName) -> str:
             return "You are the General CFO Assistant. Give a helpful financial answer."
 
 
-def run_orchestrator(user_message: str) -> str:
+def run_orchestrator(
+    user_message: str,
+    old_messages: list[ChatMessage] | None = None,
+) -> str:
     selected_agent = select_agent(user_message)
     agent_instruction = get_agent_instruction(selected_agent)
     context_text = get_context(user_message)
+
+    history_messages = [
+        {
+            "role": message.role,
+            "content": message.content,
+        }
+        for message in (old_messages or [])
+    ]
+
     print("==============================")
     print("ORCHESTRATOR CALLED")
     print("USER MESSAGE:", user_message)
     print("SELECTED AGENT:", selected_agent)
-    print("CONTEXT TEXT:", context_text)
     print("==============================")
 
     client = get_llm_client()
@@ -160,7 +173,7 @@ def run_orchestrator(user_message: str) -> str:
         messages=[
             {
                 "role": "system",
-             "content": f"""
+                "content": f"""
 {SYSTEM_PROMPT}
 
 You are now acting as the Orchestrator.
@@ -174,6 +187,7 @@ Financial context:
 {context_text}
 """,
             },
+            *history_messages,
             {
                 "role": "user",
                 "content": user_message,
@@ -187,4 +201,4 @@ Financial context:
     return reply or "No response generated."
 
 
-# Note: This file selects the right agent and sends the user message to the LLM.
+# Note: This file selects the right agent and sends chat history to the LLM.

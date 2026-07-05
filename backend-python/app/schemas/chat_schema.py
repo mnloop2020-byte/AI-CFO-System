@@ -1,4 +1,10 @@
+from typing import Literal
 from pydantic import BaseModel
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
 
 
 class ChatRequest(BaseModel):
@@ -8,7 +14,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
-    conversation_id: str | None = None
+    conversation_id: str
 
 
-# Note: This file defines the request and response shape for the chat API.
+# Note: This file defines chat request, response, and message history shapes.
