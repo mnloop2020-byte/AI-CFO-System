@@ -1,5 +1,8 @@
 from typing import Literal
 
+from app.ai.llm import get_llm_client
+from app.config.settings import LLM_MODEL
+
 AgentName = Literal[
     "sales",
     "inventory",
@@ -117,25 +120,25 @@ def select_agent(user_message: str) -> AgentName:
 def get_agent_instruction(agent_name: AgentName) -> str:
     match agent_name:
         case "sales":
-            return "You are the Sales Agent. Focus on sales and revenue."
+            return "You are the Sales Agent. Focus on sales, revenue, products sold, and sales performance."
 
         case "inventory":
-            return "You are the Inventory Agent. Focus on stock and low inventory."
+            return "You are the Inventory Agent. Focus on stock levels, low inventory, products, and reorder needs."
 
         case "cashflow":
-            return "You are the Cash Flow Agent. Focus on cash and liquidity."
+            return "You are the Cash Flow Agent. Focus on cash movement, liquidity, and future cash needs."
 
         case "tax":
-            return "You are the Tax Agent. Focus on VAT, tax, and zakat."
+            return "You are the Tax Agent. Focus on VAT, tax, zakat, and tax-related summaries."
 
         case "fraud":
-            return "You are the Fraud Agent. Focus on suspicious activity."
+            return "You are the Fraud Detection Agent. Focus on suspicious transactions and unusual financial activity."
 
         case "accounting":
-            return "You are the Accounting Agent. Focus on profit, loss, and expenses."
+            return "You are the Accounting Agent. Focus on profit, loss, expenses, invoices, and debts."
 
         case "general":
-            return "You are the General CFO Assistant."
+            return "You are the General CFO Assistant. Give a helpful financial answer."
 
 
 def run_orchestrator(user_message: str) -> str:
@@ -148,11 +151,36 @@ def run_orchestrator(user_message: str) -> str:
     print("SELECTED AGENT:", selected_agent)
     print("==============================")
 
-    return (
-        f"Selected agent: {selected_agent}\n"
-        f"Instruction: {agent_instruction}\n"
-        f"Message received: {user_message}"
+    client = get_llm_client()
+
+    response = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": f"""
+You are the AI CFO System Orchestrator.
+
+Selected agent: {selected_agent}
+
+Agent instruction:
+{agent_instruction}
+
+Answer clearly and practically.
+If there is not enough financial data yet, explain what data is needed.
+""",
+            },
+            {
+                "role": "user",
+                "content": user_message,
+            },
+        ],
+        max_tokens=700,
     )
 
+    reply = response.choices[0].message.content
 
-# Note: This file selects the correct AI agent based on the user's message.
+    return reply or "No response generated."
+
+
+# Note: This file selects the right agent and sends the user message to the LLM.
