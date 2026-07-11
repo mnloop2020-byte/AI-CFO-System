@@ -1,5 +1,8 @@
+# this file for libraries that we need to install in the backend-python environment.
 fastapi
 uvicorn
 python-dotenv
 openai
 pydantic
+supabase
+sentence-transformers

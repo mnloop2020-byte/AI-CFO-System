@@ -1,12 +1,14 @@
 from typing import Literal
-
+#Note: This imports Literal, which lets us restrict a value to specific allowed strings.
 from app.ai.llm import get_llm_client
 from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.rag.get_context import get_context
 from app.schemas.chat_schema import ChatMessage
-
+from app.agents.inventory_agent import run_inventory_agent
+from app.agents.sales_agent import run_sales_agent
 AgentName = Literal[
+    # literal restricts the agent name to one of the following strings.
     "sales",
     "inventory",
     "cashflow",
@@ -92,11 +94,16 @@ agent_keywords: dict[str, list[str]] = {
 }
 
 
+
+
 def has_any_keyword(message: str, keywords: list[str]) -> bool:
+    # this line tells us if any of the keywords are present in the message. It returns True if at least one keyword is found, otherwise False.
     return any(keyword in message for keyword in keywords)
 
-
-def select_agent(user_message: str) -> AgentName:
+def select_agent(
+    user_message: str,
+    old_messages: list[ChatMessage] | None = None,
+    ) -> AgentName:
     message = user_message.lower()
 
     if has_any_keyword(message, agent_keywords["sales"]):
@@ -117,11 +124,24 @@ def select_agent(user_message: str) -> AgentName:
     if has_any_keyword(message, agent_keywords["accounting"]):
         return "accounting"
 
+    for old_message in reversed(old_messages or []):
+        if old_message.role != "user":
+            continue
+
+        previous_agent = select_agent(old_message.content, old_messages)
+        if previous_agent != "general":
+            return previous_agent
+
+        break
+
     return "general"
+    #Note: If the current message has no clear keyword, this checks the most recent user message and continues with its specialized agent.
+
 
 
 def get_agent_instruction(agent_name: AgentName) -> str:
     match agent_name:
+        # match means like a switch statement. It checks the value of agent_name and executes the corresponding case.
         case "sales":
             return "You are the Sales Agent. Focus on sales, revenue, products sold, and sales performance."
 
@@ -148,9 +168,29 @@ def run_orchestrator(
     user_message: str,
     old_messages: list[ChatMessage] | None = None,
 ) -> str:
-    selected_agent = select_agent(user_message)
+    selected_agent = select_agent(
+    user_message=user_message,
+    old_messages=old_messages,
+)
+    #Note: This sends conversation history from the Orchestrator to the agent-selection function.
+
+    if selected_agent == "inventory":
+        print("DELEGATING TO INVENTORY AGENT")
+        return run_inventory_agent(
+    user_message=user_message,
+    old_messages=old_messages,
+)    
+    #Note: This passes both the current question and previous conversation messages to the Inventory Agent.
+    if selected_agent == "sales":
+        print("DELEGATING TO SALES AGENT")
+        return run_sales_agent(
+            user_message=user_message,
+            old_messages=old_messages,
+        )
+        
     agent_instruction = get_agent_instruction(selected_agent)
     context_text = get_context(user_message)
+    
 
     history_messages = [
         {
@@ -158,6 +198,9 @@ def run_orchestrator(
             "content": message.content,
         }
         for message in (old_messages or [])
+        # the lesson called  list Comprehension
+        # here we gonna covert to message format to let the LLM understand the chat history. 
+        # If old_messages is None, we use an empty list instead. 
     ]
 
     print("==============================")
@@ -167,8 +210,10 @@ def run_orchestrator(
     print("==============================")
 
     client = get_llm_client()
+# we call the get_llm_client function to get a client object that allows us to interact with the LLM API.
 
     response = client.chat.completions.create(
+        # Note: This uses the client to send a message to the LLM.
         model=LLM_MODEL,
         messages=[
             {
@@ -188,12 +233,14 @@ Financial context:
 """,
             },
             *history_messages,
+            # The star unpacks the list items into another list.
             {
                 "role": "user",
                 "content": user_message,
             },
         ],
         max_tokens=700,
+        # This limits how long the AI response can be
     )
 
     reply = response.choices[0].message.content
@@ -201,4 +248,13 @@ Financial context:
     return reply or "No response generated."
 
 
-# Note: This file selects the right agent and sends chat history to the LLM.
+
+# 1. select_agent
+# 2. get_agent_instruction
+# 3. get_context
+# 4. prepare history_messages
+# 5. print debug logs
+# 6. get LLM client
+# 7. send messages to LLM
+# 8. extract reply
+# 9. return reply

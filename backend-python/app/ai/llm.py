@@ -16,3 +16,11 @@ def get_llm_client() -> OpenAI:
 
 
 # Note: This file creates the OpenRouter LLM client using the OpenAI SDK.
+
+# أنت = orchestrator.py
+# الاستقبال = llm.py
+# رقم العضوية / التصريح = API Key
+# شركة الاتصال = OpenRouter
+# الطبيب = LLM Model
+# دور llm.py.
+# هو لا يفكر مثل الطبيب، فقط يجهز الاتصال.
