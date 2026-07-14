@@ -1,12 +1,22 @@
 from app.services.expenses_store import get_expenses
 from app.services.invoices_store import get_invoices
 from app.tools.sales_tools import get_sales_summary
+from app.schemas.expenses_schema import ExpenseResponse
+from app.schemas.invoices_schema import InvoiceResponse
 
+def get_accounting_summary(
+    sales_summary: dict | None = None,
+    expenses: list[ExpenseResponse] | None = None,
+    invoices: list[InvoiceResponse] | None = None,
+) -> dict:
+    if sales_summary is None:
+        sales_summary = get_sales_summary()
 
-def get_accounting_summary() -> dict:
-    sales_summary = get_sales_summary()
-    expenses = get_expenses()
-    invoices = get_invoices()
+    if expenses is None:
+        expenses = get_expenses()
+
+    if invoices is None:
+        invoices = get_invoices()
 
     total_expenses = sum(
         float(expense.amount)

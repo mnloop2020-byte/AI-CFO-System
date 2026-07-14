@@ -1,23 +1,47 @@
+from ast import keyword
+from collections.abc import Callable
+#Callable describes agent functions 
 from typing import Literal
-#Note: This imports Literal, which lets us restrict a value to specific allowed strings.
+# while Literal restricts agent names to specific strings
 from app.ai.llm import get_llm_client
 from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.rag.get_context import get_context
 from app.schemas.chat_schema import ChatMessage
+
 from app.agents.inventory_agent import run_inventory_agent
 from app.agents.sales_agent import run_sales_agent
+from app.agents.accounting_agent import run_accounting_agent
+from app.agents.cashflow_agent import run_cashflow_agent
+from app.agents.tax_agent import run_tax_agent
+from app.agents.fraud_agent import run_fraud_agent
+from app.agents.report_writer_agent import run_report_writer_agent
+
+
 AgentName = Literal[
-    # literal restricts the agent name to one of the following strings.
     "sales",
     "inventory",
     "cashflow",
     "tax",
     "fraud",
     "accounting",
+    "reportwriter",
+    "ceo",
     "general",
 ]
+AgentRunner = Callable[..., str]
+# note: AgentRunner defines the type of agent functions before that type is used inside the AGENT_RUNNERS dictionary.
 
+AGENT_RUNNERS: dict[AgentName, AgentRunner] = {
+    "sales": run_sales_agent,
+    "inventory": run_inventory_agent,
+    "cashflow": run_cashflow_agent,
+    "tax": run_tax_agent,
+    "fraud": run_fraud_agent,
+    "accounting": run_accounting_agent,
+    "reportwriter": run_report_writer_agent,
+}
+# AgentRunner is a type alias for a callable that takes any arguments and returns a string. This is used to represent the functions that run each specialized agent.
 
 agent_keywords: dict[str, list[str]] = {
     "sales": [
@@ -90,6 +114,34 @@ agent_keywords: dict[str, list[str]] = {
         "فواتير",
         "ديون",
         "مستحقات",
+         "accounting",
+        "accountant",
+        "محاسبة",
+        "محاسبي",
+        "الحسابات",
+    ],
+        "reportwriter": [
+        "cfo report",
+        "financial report",
+        "executive report",
+        "full report",
+        "تقرير مالي",
+        "تقرير تنفيذي",
+        "تقرير شامل",
+        "تقرير المدير المالي",
+    ],
+     "ceo": [
+        "ceo",
+        "executive priority",
+        "executive priorities",
+        "business priority",
+        "business priorities",
+        "decision support",
+        "أولوية",
+        "أولويات",
+        "قرار تنفيذي",
+        "قرارات تنفيذية",
+        "المدير التنفيذي",
     ],
 }
 
@@ -100,35 +152,65 @@ def has_any_keyword(message: str, keywords: list[str]) -> bool:
     # this line tells us if any of the keywords are present in the message. It returns True if at least one keyword is found, otherwise False.
     return any(keyword in message for keyword in keywords)
 
+def count_keyword_matches(message: str, keywords: list[str]) -> int:
+    return sum(
+        2 if " " in keyword else 1
+        for keyword in keywords
+        if keyword in message
+    )
+# note: This gives multi-word phrases two points and single keywords one point, making specific matches stronger than general matches.e.
+
+def calculate_agent_scores(message: str) -> dict[AgentName, int]:    return {
+        agent_name: count_keyword_matches(message, keywords)
+        for agent_name, keywords in agent_keywords.items()
+    }
+#  note: This function calculates and returns the keyword score for every agent.
+
+def get_top_scoring_agents(
+    scores: dict[AgentName, int],
+) -> list[AgentName]:
+    highest_score = max(scores.values(), default=0)
+
+    if highest_score == 0:
+        return []
+
+    return [
+        agent_name
+        for agent_name, score in scores.items()
+        if score == highest_score
+    ]
+#  note: This function returns all agents tied for the highest non-zero score.
+
+def choose_agent_from_top_scores(
+    top_agents: list[AgentName],
+) -> AgentName:
+    if not top_agents:
+        return "general"
+
+    return max(
+        top_agents,
+        key=lambda agent_name: AGENT_TIE_BREAK_PRIORITY[agent_name],
+    )
+#  note: This function returns the highest-priority agent when multiple agents have the same score.
+
 def select_agent(
     user_message: str,
     old_messages: list[ChatMessage] | None = None,
-    ) -> AgentName:
+) -> AgentName:
     message = user_message.lower()
 
-    if has_any_keyword(message, agent_keywords["sales"]):
-        return "sales"
+    scores = calculate_agent_scores(message)
+    top_agents = get_top_scoring_agents(scores)
+    selected_agent = choose_agent_from_top_scores(top_agents)
 
-    if has_any_keyword(message, agent_keywords["inventory"]):
-        return "inventory"
-
-    if has_any_keyword(message, agent_keywords["cashflow"]):
-        return "cashflow"
-
-    if has_any_keyword(message, agent_keywords["tax"]):
-        return "tax"
-
-    if has_any_keyword(message, agent_keywords["fraud"]):
-        return "fraud"
-
-    if has_any_keyword(message, agent_keywords["accounting"]):
-        return "accounting"
+    if selected_agent != "general":
+        return selected_agent
 
     for old_message in reversed(old_messages or []):
         if old_message.role != "user":
             continue
 
-        previous_agent = select_agent(old_message.content, old_messages)
+        previous_agent = select_agent(old_message.content)
         if previous_agent != "general":
             return previous_agent
 
@@ -137,7 +219,7 @@ def select_agent(
     return "general"
     #Note: If the current message has no clear keyword, this checks the most recent user message and continues with its specialized agent.
 
-
+# note: The function now evaluates every agent instead of stopping at the first keyword match.
 
 def get_agent_instruction(agent_name: AgentName) -> str:
     match agent_name:
@@ -162,35 +244,64 @@ def get_agent_instruction(agent_name: AgentName) -> str:
 
         case "general":
             return "You are the General CFO Assistant. Give a helpful financial answer."
+        
+        case "reportwriter":
+            return (
+                "You are the CFO Report Writer Agent. "
+                "Produce structured reports using verified financial data."
+            )
+        
+        case "ceo":
+            return (
+                "You are the CEO Decision Support Agent. "
+                "Turn verified CFO data into executive priorities."
+            )
 
 
+
+def get_agent_runner(agent_name: AgentName) -> AgentRunner | None:
+    if agent_name == "ceo":
+        from app.agents.ceo_agent import run_ceo_agent
+
+        return run_ceo_agent
+
+    return AGENT_RUNNERS.get(agent_name)
+#English note: This function returns the correct agent function based on the selected agent name.
+
+
+AGENT_TIE_BREAK_PRIORITY: dict[AgentName, int] = {
+    "ceo": 80,
+    "reportwriter": 70,
+    "fraud": 60,
+    "tax": 50,
+    "cashflow": 40,
+    "accounting": 30,
+    "inventory": 20,
+    "sales": 10,
+    "general": 0,
+}
+# note: This dictionary defines an explicit priority used only when multiple agents receive the same score.
 def run_orchestrator(
     user_message: str,
     old_messages: list[ChatMessage] | None = None,
 ) -> str:
     selected_agent = select_agent(
-    user_message=user_message,
-    old_messages=old_messages,
-)
-    #Note: This sends conversation history from the Orchestrator to the agent-selection function.
+        user_message=user_message,
+        old_messages=old_messages,
+    )
 
-    if selected_agent == "inventory":
-        print("DELEGATING TO INVENTORY AGENT")
-        return run_inventory_agent(
-    user_message=user_message,
-    old_messages=old_messages,
-)    
-    #Note: This passes both the current question and previous conversation messages to the Inventory Agent.
-    if selected_agent == "sales":
-        print("DELEGATING TO SALES AGENT")
-        return run_sales_agent(
+    agent_runner = get_agent_runner(selected_agent)
+
+    if agent_runner is not None:
+        print(f"DELEGATING TO {selected_agent.upper()} AGENT")
+
+        return agent_runner(
             user_message=user_message,
             old_messages=old_messages,
         )
-        
+
     agent_instruction = get_agent_instruction(selected_agent)
     context_text = get_context(user_message)
-    
 
     history_messages = [
         {
@@ -249,12 +360,3 @@ Financial context:
 
 
 
-# 1. select_agent
-# 2. get_agent_instruction
-# 3. get_context
-# 4. prepare history_messages
-# 5. print debug logs
-# 6. get LLM client
-# 7. send messages to LLM
-# 8. extract reply
-# 9. return reply

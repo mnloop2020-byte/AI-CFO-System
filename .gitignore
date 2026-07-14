@@ -1,12 +1,32 @@
-# Environment files
+# Environment files and secrets
 .env
+.env.*
+!.env.example
+!**/.env.example
 
-# Node.js
+# Node.js / Next.js
 node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+.venv/
+venv/
 backend-python/.venv/
 backend-python/venv/
 backend-python/**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Operating system files
+.DS_Store
+desktop.ini
+Thumbs.db
