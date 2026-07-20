@@ -1,4 +1,5 @@
 from app.agents.orchestrator import run_orchestrator
+from app.schemas.rag_schema import DocumentSource
 from app.services.conversation_store import (
     create_conversation,
     get_conversation_messages,
@@ -6,7 +7,39 @@ from app.services.conversation_store import (
 )
 
 
-def handle_chat(message: str, conversation_id: str | None = None) -> tuple[str, str]:
+def _append_source_list(
+    reply: str,
+    sources: list[DocumentSource],
+    user_message: str,
+) -> str:
+    if not sources:
+        return reply
+
+    all_sources_are_cited = all(
+        source.file_name in reply
+        and (
+            f"chunk {source.chunk_index + 1}" in reply.lower()
+            or f"المقطع {source.chunk_index + 1}" in reply
+        )
+        for source in sources
+    )
+    if all_sources_are_cited:
+        return reply
+
+    is_arabic = any("\u0600" <= character <= "\u06ff" for character in user_message)
+    heading = "### المصادر" if is_arabic else "### Sources"
+    source_lines = [
+        f"- `{source.file_name}` — "
+        + (f"المقطع {source.chunk_index + 1}" if is_arabic else f"chunk {source.chunk_index + 1}")
+        for source in sources
+    ]
+    return f"{reply.rstrip()}\n\n{heading}\n" + "\n".join(source_lines)
+
+
+def handle_chat(
+    message: str,
+    conversation_id: str | None = None,
+) -> tuple[str, str, list[DocumentSource]]:
     # message: the current question/message from the user.
     # conversation_id: can be a string or None.
     # tuple[str, str]: this function returns reply and conversation_id.
@@ -18,7 +51,8 @@ def handle_chat(message: str, conversation_id: str | None = None) -> tuple[str, 
     old_messages = get_conversation_messages(conversation_id)
     # Get previous messages from Supabase for this conversation.
 
-    reply = run_orchestrator(message, old_messages)
+    reply, sources = run_orchestrator(message, old_messages)
+    reply = _append_source_list(reply, sources, message)
     # Send the current user message and old messages to the Orchestrator.
 
     save_message(
@@ -35,7 +69,7 @@ def handle_chat(message: str, conversation_id: str | None = None) -> tuple[str, 
     )
     # Save the assistant's reply in Supabase.
 
-    return reply, conversation_id
+    return reply, conversation_id, sources
     # Return the AI reply and the conversation ID.
 
 

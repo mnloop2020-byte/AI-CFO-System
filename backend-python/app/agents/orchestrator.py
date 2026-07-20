@@ -8,6 +8,7 @@ from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.rag.get_context import get_context
 from app.schemas.chat_schema import ChatMessage
+from app.schemas.rag_schema import DocumentSource
 
 from app.agents.inventory_agent import run_inventory_agent
 from app.agents.sales_agent import run_sales_agent
@@ -27,6 +28,7 @@ AgentName = Literal[
     "accounting",
     "reportwriter",
     "ceo",
+    "document",
     "general",
 ]
 AgentRunner = Callable[..., str]
@@ -44,6 +46,23 @@ AGENT_RUNNERS: dict[AgentName, AgentRunner] = {
 # AgentRunner is a type alias for a callable that takes any arguments and returns a string. This is used to represent the functions that run each specialized agent.
 
 agent_keywords: dict[str, list[str]] = {
+    "document": [
+        "document",
+        "uploaded file",
+        "uploaded document",
+        "according to the file",
+        "according to the document",
+        "in the file",
+        "in the document",
+        "مستند",
+        "المستند",
+        "وثيقة",
+        "الوثيقة",
+        "الملف",
+        "حسب الملف",
+        "وفقًا للمستند",
+        "وفقا للمستند",
+    ],
     "sales": [
         "sale",
         "sales",
@@ -257,6 +276,13 @@ def get_agent_instruction(agent_name: AgentName) -> str:
                 "Turn verified CFO data into executive priorities."
             )
 
+        case "document":
+            return (
+                "You are the Document Retrieval Agent. Answer from relevant "
+                "uploaded-document context, distinguish document claims from "
+                "live financial records, and cite every supported claim."
+            )
+
 
 
 def get_agent_runner(agent_name: AgentName) -> AgentRunner | None:
@@ -270,6 +296,7 @@ def get_agent_runner(agent_name: AgentName) -> AgentRunner | None:
 
 
 AGENT_TIE_BREAK_PRIORITY: dict[AgentName, int] = {
+    "document": 90,
     "ceo": 80,
     "reportwriter": 70,
     "fraud": 60,
@@ -284,7 +311,7 @@ AGENT_TIE_BREAK_PRIORITY: dict[AgentName, int] = {
 def run_orchestrator(
     user_message: str,
     old_messages: list[ChatMessage] | None = None,
-) -> str:
+) -> tuple[str, list[DocumentSource]]:
     selected_agent = select_agent(
         user_message=user_message,
         old_messages=old_messages,
@@ -295,13 +322,17 @@ def run_orchestrator(
     if agent_runner is not None:
         print(f"DELEGATING TO {selected_agent.upper()} AGENT")
 
-        return agent_runner(
-            user_message=user_message,
-            old_messages=old_messages,
+        return (
+            agent_runner(
+                user_message=user_message,
+                old_messages=old_messages,
+            ),
+            [],
         )
 
     agent_instruction = get_agent_instruction(selected_agent)
-    context_text = get_context(user_message)
+    rag_context = get_context(user_message)
+    context_text = rag_context.prompt
 
     history_messages = [
         {
@@ -341,6 +372,11 @@ Agent instruction:
 
 Financial context:
 {context_text}
+
+Citation rules:
+- Cite uploaded-document claims with the exact source markers provided above.
+- Never invent a source or cite a chunk that is not in the context.
+- If no relevant uploaded-document context is available, say which information is missing.
 """,
             },
             *history_messages,
@@ -356,7 +392,7 @@ Financial context:
 
     reply = response.choices[0].message.content
 
-    return reply or "No response generated."
+    return reply or "No response generated.", rag_context.sources
 
 
 

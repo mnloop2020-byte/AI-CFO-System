@@ -1,0 +1,304 @@
+"use client";
+
+import { type FormEvent, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  LoaderCircle,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+
+import { useLanguage } from "@/components/providers/LanguageProvider";
+import { createClient } from "@/lib/supabase/client";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { language, toggleLanguage } = useLanguage();
+  const isArabic = language === "ar";
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const benefits = isArabic
+    ? [
+        "سجلات مالية وسجلات عملاء في مكان واحد",
+        "تحليلات من وكلاء ماليين متخصصين",
+        "مراجعة بشرية للقرارات الحساسة",
+      ]
+    : [
+        "Centralized financial and CRM records",
+        "Specialized finance agent analysis",
+        "Human review for sensitive decisions",
+      ];
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setAuthError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const nextPath = new URLSearchParams(window.location.search).get("next");
+      router.replace(
+        nextPath?.startsWith("/") ? nextPath : "/dashboard",
+      );
+      router.refresh();
+    } catch (error) {
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : isArabic
+            ? "تعذر تسجيل الدخول."
+            : "Unable to sign in.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-app-background p-4 sm:p-6">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl overflow-hidden rounded-3xl border border-border bg-surface shadow-xl lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="flex items-center justify-center px-6 py-10 sm:px-12 lg:px-16">
+          <div className="w-full max-w-md">
+            <div className="flex items-center justify-between gap-4">
+              <Link href="/" className="inline-flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
+                  <Sparkles size={22} />
+                </span>
+
+                <span>
+                  <span className="block font-semibold text-text-primary">
+                    Zemam
+                  </span>
+
+                  <span className="block text-xs text-text-secondary">
+                    {isArabic ? "نظام المدير المالي الذكي" : "AI CFO System"}
+                  </span>
+                </span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={toggleLanguage}
+                aria-label={isArabic ? "Switch to English" : "التبديل إلى العربية"}
+                className="rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary-soft"
+              >
+                {isArabic ? "English" : "العربية"}
+              </button>
+            </div>
+
+            <div className="mt-10">
+              <p className="text-sm font-medium text-primary">
+                {isArabic ? "مرحبًا بعودتك" : "Welcome back"}
+              </p>
+
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-primary">
+                {isArabic
+                  ? "سجّل الدخول إلى مساحة عملك المالية"
+                  : "Sign in to your financial workspace"}
+              </h1>
+
+              <p className="mt-3 leading-7 text-text-secondary">
+                {isArabic
+                  ? "ادخل إلى بيانات شركتك المالية ووكلاء الذكاء الاصطناعي والتحليلات التنفيذية."
+                  : "Access your company’s financial data, AI agents, and executive insights."}
+              </p>
+            </div>
+
+            {authError ? (
+              <div
+                role="alert"
+                className="mt-6 rounded-xl border border-red-100 bg-danger-soft px-4 py-3 text-sm text-danger"
+              >
+                {authError}
+              </div>
+            ) : null}
+
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-text-primary">
+                  {isArabic ? "البريد الإلكتروني" : "Email address"}
+                </span>
+
+                <span className="relative block" dir="ltr">
+                  <Mail
+                    size={18}
+                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary"
+                  />
+
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="name@company.com"
+                    className="h-12 w-full rounded-xl border border-border bg-surface pl-11 pr-4 text-sm text-text-primary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary-soft"
+                  />
+                </span>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-medium text-text-primary">
+                    {isArabic ? "كلمة المرور" : "Password"}
+                  </span>
+
+                  <Link
+                    href="/login/forgot-password"
+                    className="text-sm font-medium text-primary hover:text-primary-hover"
+                  >
+                    {isArabic ? "نسيت كلمة المرور؟" : "Forgot password?"}
+                  </Link>
+                </span>
+
+                <span className="relative block" dir="ltr">
+                  <LockKeyhole
+                    size={18}
+                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary"
+                  />
+
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    required
+                    placeholder={isArabic ? "أدخل كلمة المرور" : "Enter your password"}
+                    className="h-12 w-full rounded-xl border border-border bg-surface pl-11 pr-12 text-sm text-text-primary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary-soft"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    aria-label={
+                      showPassword
+                        ? isArabic
+                          ? "إخفاء كلمة المرور"
+                          : "Hide password"
+                        : isArabic
+                          ? "إظهار كلمة المرور"
+                          : "Show password"
+                    }
+                    className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-soft hover:text-text-primary"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </span>
+              </label>
+
+              <label className="flex items-center gap-3 text-sm text-text-secondary">
+                <input
+                  type="checkbox"
+                  name="remember"
+                  className="h-4 w-4 rounded border-border accent-blue-600"
+                />
+                {isArabic ? "إبقائي مسجلًا على هذا الجهاز" : "Keep me signed in on this device"}
+              </label>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? (
+                  <LoaderCircle size={18} className="animate-spin" />
+                ) : null}
+                {submitting
+                  ? isArabic
+                    ? "جارٍ تسجيل الدخول..."
+                    : "Signing in..."
+                  : isArabic
+                    ? "تسجيل الدخول"
+                    : "Sign in"}
+              </button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-text-secondary">
+              {isArabic ? "ليس لديك حساب شركة؟ " : "Don’t have a company account? "}
+              <Link
+                href="/register"
+                className="font-semibold text-primary hover:text-primary-hover"
+              >
+                {isArabic ? "إنشاء حساب" : "Create an account"}
+              </Link>
+            </p>
+
+            <p className="mt-8 text-center text-xs leading-5 text-text-secondary">
+              {isArabic
+                ? "تتحقق الجلسة عبر Supabase Auth، ويحدد الخادم شركة المستخدم قبل الوصول إلى أي بيانات."
+                : "Supabase Auth verifies the session, and the server resolves the user’s company before any data access."}
+            </p>
+          </div>
+        </section>
+
+        <section className="hidden bg-primary-soft p-10 lg:flex lg:flex-col lg:justify-between">
+          <div className="flex justify-end">
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-surface px-3 py-1.5 text-xs font-medium text-primary">
+              <ShieldCheck size={15} />
+              {isArabic ? "مساحة عمل مالية آمنة" : "Secure financial workspace"}
+            </span>
+          </div>
+
+          <div className="mx-auto max-w-lg">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-blue-200">
+              <Sparkles size={30} />
+            </div>
+
+            <h2 className="mt-8 text-3xl font-semibold leading-tight text-text-primary">
+              {isArabic
+                ? "وضوح مالي مدعوم بوكلاء ذكاء اصطناعي متخصصين."
+                : "Financial clarity powered by specialized AI agents."}
+            </h2>
+
+            <p className="mt-4 leading-7 text-text-secondary">
+              {isArabic
+                ? "راجع السجلات المتحقق منها، وراقب أداء أعمالك، واطلب تحليلًا ماليًا واضحًا من مديرك المالي الذكي."
+                : "Review verified records, monitor business performance, and ask your AI CFO for clear financial analysis."}
+            </p>
+
+            <div className="mt-8 space-y-4">
+              {benefits.map((benefit) => (
+                <div
+                  key={benefit}
+                  className="flex items-center gap-3 rounded-xl border border-blue-100 bg-surface/80 px-4 py-3"
+                >
+                  <CheckCircle2
+                    size={18}
+                    className="shrink-0 text-success"
+                  />
+
+                  <span className="text-sm font-medium text-text-primary">
+                    {benefit}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-center text-xs text-text-secondary">
+            {isArabic
+              ? "يجب مراجعة إجابات الذكاء الاصطناعي قبل اتخاذ القرارات المالية."
+              : "AI responses should be reviewed before financial decisions."}
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}

@@ -6,3 +6,11 @@ openai
 pydantic
 supabase
 sentence-transformers
+reportlab
+uharfbuzz
+arabic-reshaper
+python-bidi
+psycopg[binary]
+python-multipart
+pypdf
+python-docx

@@ -1,22 +1,7 @@
 from datetime import datetime, timezone
 
-from supabase import Client, create_client
-
-from app.config.settings import SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
 from app.schemas.expenses_schema import ExpenseCreate, ExpenseResponse ,ExpenseUpdate
-
-
-def get_supabase_client() -> Client:
-    if not SUPABASE_URL:
-        raise ValueError("SUPABASE_URL is missing. Add it to backend-python/.env")
-
-    if not SUPABASE_SERVICE_ROLE_KEY:
-        raise ValueError(
-            "SUPABASE_SERVICE_ROLE_KEY is missing. Add it to backend-python/.env"
-        )
-
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    # Creates and returns the Supabase client.
+from app.services.supabase_client import get_supabase_client
 
 
 def create_expense(expense: ExpenseCreate) -> ExpenseResponse:
