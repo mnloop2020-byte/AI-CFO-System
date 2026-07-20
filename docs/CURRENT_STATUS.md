@@ -10,7 +10,7 @@ Last updated: 2026-07-21
 - Expenses page, table, and form; temporary-record create/update/delete was tested.
 - Inventory page, table, and form; TypeScript, route compilation, HTTP response, and live API calculations were verified.
 - Invoices page, table, and form; TypeScript, route compilation, HTTP response, and live API values were verified.
-- Reports page, templates, preview dialog, and report-history placeholder are localized. Live agent execution and PDF download are connected; report persistence remains pending.
+- Reports page, templates, generation dialog, real report history, and protected PDF downloads are localized and connected.
 - Settings page and company-settings form; TypeScript and the running route were verified. The UI remains a clearly labelled design preview until backend company settings are implemented.
 - Profile and Security now displays the authenticated Supabase user, company, and database-backed role. The user's display name can be updated in Auth metadata. MFA and advanced session management remain explicitly deferred.
 - Authentication UI now provides real login/logout, invitation-only registration, email confirmation callback handling, password recovery, and password update in English/Arabic with protected redirects.
@@ -24,7 +24,7 @@ Last updated: 2026-07-21
 - PDF generation is connected through `POST /reports/pdf`. It renders English and Arabic reports with embedded DejaVu Sans fonts, RTL shaping, page headers, footers, page numbers, and a human-review disclaimer.
 - The Reports dialog can download the generated report as a PDF without calling the AI agent a second time.
 - English, Arabic, mixed Arabic/English, and a six-page Arabic report were rendered and visually inspected without clipping or missing glyphs.
-- The private `reports` bucket and RLS-enabled `public.reports` table now exist remotely. Report-history application integration remains pending.
+- The private `reports` bucket and RLS-enabled `public.reports` table are integrated with short-lived signed downloads and real history.
 - Chat conversation history is connected end to end. The backend lists conversations, restores their messages, and supports deletion with proper `404` handling; the frontend lists saved conversations, opens them, starts a new conversation, refreshes the list after replies, and provides localized delete controls.
 - The live browser restored a saved Arabic conversation successfully and then returned to an empty new-conversation state. The existing 26 saved conversations were preserved during verification.
 - TypeScript, Python bytecode compilation, safe API error handling, and a fresh production build of all 19 routes passed after the Chat history integration.
@@ -70,11 +70,10 @@ Phase 1 — Single Company Authentication — is complete. Phase 2 is in progres
 
 The remaining Phase 2 order is:
 
-1. Complete PDF report persistence, private Storage, history, and protected downloads.
-2. Connect invoice and expense attachments to private Storage.
-3. Refresh Dashboard KPIs immediately after CRUD operations.
-4. Harden CEO Agent claims and source attribution.
-5. Begin AI Financial Action Center only after the preceding Phase 2 work is stable.
+1. Connect invoice and expense attachments to private Storage.
+2. Refresh Dashboard KPIs immediately after CRUD operations.
+3. Harden CEO Agent claims and source attribution.
+4. Begin AI Financial Action Center only after the preceding Phase 2 work is stable.
 
 ## Phase 2 progress
 
@@ -83,6 +82,9 @@ The remaining Phase 2 order is:
 - The backend always derives the company from the verified request context. The Settings payload rejects extra fields, including any frontend-provided `company_id`.
 - The bilingual Settings page now loads and saves the real company record, supports RTL/LTR, shows read-only mode to Accountant/Viewer, and no longer contains Design-only data or messages.
 - Live access checks passed: Owner read/update `200`, Viewer read `200`, Viewer update `403`, and unauthenticated read `401`. Protected business row counts remain unchanged.
+- **2.2 PDF report persistence is complete.** A live Sales Performance report was generated from the preserved backend data, rendered as a valid PDF, stored as metadata in `public.reports`, and uploaded beneath the trusted company folder in the private `reports` bucket.
+- Real report history returned the stored row, a five-minute signed download URL returned the original PDF, and the downloaded bytes passed the `%PDF-` signature check. Viewer read/download succeeded, Viewer generation was denied with `403`, and unauthenticated history was denied with `401`.
+- Automated English and multi-page Arabic PDF tests pass. The UI no longer claims that report storage is disconnected.
 
 ## Verification note
 

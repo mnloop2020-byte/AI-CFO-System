@@ -412,8 +412,8 @@ export default function ReportTemplates({
 
         <p className="mt-4 text-xs leading-5 text-text-secondary">
           {isArabic
-            ? "إنشاء النص وتنزيل PDF متصلان بالوكلاء الحقيقيين. تخزين التقارير غير متصل بعد."
-            : "Text generation and PDF download are connected to live agents. Report storage is not connected yet."}
+            ? "إنشاء النص وملف PDF والحفظ في سجل Supabase الخاص متصلة بالباك إند الحقيقي."
+            : "Text generation, PDF creation, and private Supabase report history are connected to the live backend."}
         </p>
       </section>
 
