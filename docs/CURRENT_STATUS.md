@@ -66,16 +66,23 @@ Last updated: 2026-07-21
 
 ## Current checkpoint
 
-Phase 1 — Single Company Authentication — is complete. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
+Phase 1 — Single Company Authentication — is complete. Phase 2 is in progress, with Company Settings completed. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
 
-Work is intentionally stopped before Phase 2. The approved next order is:
+The remaining Phase 2 order is:
 
-1. Connect Settings to the one real company record.
-2. Complete PDF report persistence, private Storage, history, and protected downloads.
-3. Connect invoice and expense attachments to private Storage.
-4. Refresh Dashboard KPIs immediately after CRUD operations.
-5. Harden CEO Agent claims and source attribution.
-6. Begin AI Financial Action Center only after the preceding Phase 2 work is stable.
+1. Complete PDF report persistence, private Storage, history, and protected downloads.
+2. Connect invoice and expense attachments to private Storage.
+3. Refresh Dashboard KPIs immediately after CRUD operations.
+4. Harden CEO Agent claims and source attribution.
+5. Begin AI Financial Action Center only after the preceding Phase 2 work is stable.
+
+## Phase 2 progress
+
+- **2.1 Company Settings is complete.** Migration `20260721100000_add_single_company_settings.sql` added validated company profile, locale, tax, currency, timezone, and explicit opening-balance fields without changing protected row counts.
+- `GET /company/settings` is available to all four roles through `company.read`; `PATCH /company/settings` is limited to Owner/Admin through `company.update`.
+- The backend always derives the company from the verified request context. The Settings payload rejects extra fields, including any frontend-provided `company_id`.
+- The bilingual Settings page now loads and saves the real company record, supports RTL/LTR, shows read-only mode to Accountant/Viewer, and no longer contains Design-only data or messages.
+- Live access checks passed: Owner read/update `200`, Viewer read `200`, Viewer update `403`, and unauthenticated read `401`. Protected business row counts remain unchanged.
 
 ## Verification note
 

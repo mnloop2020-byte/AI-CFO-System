@@ -33,14 +33,14 @@ Status: **complete**. MFA is intentionally deferred to the later security-harden
 
 Execute and test each item in this order:
 
-1. Connect Settings to the real single company through FastAPI and RLS.
+1. **Complete:** Connect Settings to the real single company through FastAPI and RLS.
 2. Persist generated PDF reports in the private `reports` bucket and `reports` table.
 3. Display real report history and provide short-lived signed/protected downloads.
 4. Store invoice and expense attachments in private Storage.
 5. Refresh Dashboard and page KPIs immediately after CRUD without manual refresh.
 6. Improve CEO Agent grounding so figures and conclusions come only from verified data, with clear sources where appropriate.
 
-Status: pending. Do not begin automatically from the Phase 1 checkpoint.
+Status: **in progress**. Company Settings is complete; report persistence is next.
 
 ## Phase 3: AI Financial Action Center
 
