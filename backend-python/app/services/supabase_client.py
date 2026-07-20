@@ -29,14 +29,13 @@ def get_supabase_client() -> Client:
     context = get_request_context()
     url = _require_supabase_url()
 
-    api_key = SUPABASE_PUBLISHABLE_KEY or SUPABASE_SERVICE_ROLE_KEY
-    if not api_key:
+    if not SUPABASE_PUBLISHABLE_KEY:
         raise ValueError(
             "SUPABASE_PUBLISHABLE_KEY is missing. Add the current project's "
             "publishable key to backend-python/.env"
         )
 
-    client = create_client(url, api_key)
+    client = create_client(url, SUPABASE_PUBLISHABLE_KEY)
     # PostgREST and Storage clients are initialized lazily. Replacing this
     # header before first use makes both execute as the verified user instead
     # of as service_role, so database and Storage RLS are applied.

@@ -1,6 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routes.auth import router as auth_router
 from app.routes.chat import router as chat_router
 from app.routes.customers import router as customers_router
 from app.routes.expenses import router as expenses_router
@@ -43,6 +44,7 @@ app.add_middleware(
 
 
 app.include_router(health_router)
+app.include_router(auth_router)
 protected_dependencies = [Depends(require_authenticated_request)]
 
 app.include_router(chat_router, dependencies=protected_dependencies)

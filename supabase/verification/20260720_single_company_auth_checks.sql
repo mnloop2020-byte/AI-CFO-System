@@ -1,12 +1,46 @@
 -- Read-only verification after applying
--- 20260720120000_create_auth_and_tenant_isolation.sql.
+-- 20260720170000_create_single_company_auth.sql.
+-- This file does not mutate application data or authentication state.
 
 select jsonb_pretty(
     jsonb_build_object(
         'database_user', current_user,
+        'migration_audit', (
+            select jsonb_build_object(
+                'before_counts', before_counts,
+                'after_counts', after_counts,
+                'checks_passed', checks_passed,
+                'applied_at', applied_at
+            )
+            from private.migration_audit
+            where migration_name = '20260720170000_create_single_company_auth'
+        ),
         'auth_users', (select count(*) from auth.users),
-        'companies', (select count(*) from public.companies),
+        'companies', (
+            select jsonb_agg(
+                jsonb_build_object(
+                    'id', id,
+                    'name', name,
+                    'singleton_key', singleton_key
+                ) order by created_at
+            )
+            from public.companies
+        ),
         'company_members', (select count(*) from public.company_members),
+        'roles', (
+            select jsonb_agg(role order by role)
+            from private.app_roles
+        ),
+        'role_permissions', (
+            select jsonb_object_agg(role, permissions order by role)
+            from (
+                select
+                    role,
+                    jsonb_agg(permission order by permission) as permissions
+                from private.role_permissions
+                group by role
+            ) as permission_sets
+        ),
         'legacy_rag_rows', (
             select count(*)
             from public.rag_document_chunks_legacy_20260719
@@ -35,23 +69,33 @@ select jsonb_pretty(
             'documents', (select count(*) from public.documents where company_id is null),
             'document_chunks', (select count(*) from public.document_chunks where company_id is null)
         ),
+        'users_with_multiple_memberships', (
+            select count(*)
+            from (
+                select user_id
+                from public.company_members
+                group by user_id
+                having count(*) > 1
+            ) as duplicate_memberships
+        ),
         'rls_disabled_tables', coalesce((
             select jsonb_agg(class.relname order by class.relname)
             from pg_class as class
             join pg_namespace as namespace on namespace.oid = class.relnamespace
             where namespace.nspname = 'public'
               and class.relname = any(array[
-                  'companies', 'company_members', 'customers', 'sales',
-                  'expenses', 'inventory', 'invoices', 'conversations',
-                  'messages', 'reports', 'documents', 'document_chunks'
+                  'companies', 'company_members', 'company_invitations',
+                  'customers', 'sales', 'expenses', 'inventory', 'invoices',
+                  'conversations', 'messages', 'reports', 'documents',
+                  'document_chunks'
               ])
               and not class.relrowsecurity
         ), '[]'::jsonb),
-        'tenant_policy_count', (
+        'public_policy_count', (
             select count(*)
             from pg_policies
             where schemaname = 'public'
-              and policyname like 'tenant_%'
+              and policyname like 'single_company_%'
         ),
         'storage_policy_count', (
             select count(*)
@@ -59,14 +103,14 @@ select jsonb_pretty(
             where schemaname = 'storage'
               and tablename = 'objects'
               and policyname in (
-                  'tenant_documents_select',
-                  'tenant_documents_insert',
-                  'tenant_documents_update',
-                  'tenant_documents_delete',
-                  'tenant_reports_select',
-                  'tenant_reports_insert',
-                  'tenant_reports_update',
-                  'tenant_reports_delete'
+                  'single_company_documents_select',
+                  'single_company_documents_insert',
+                  'single_company_documents_update',
+                  'single_company_documents_delete',
+                  'single_company_reports_select',
+                  'single_company_reports_insert',
+                  'single_company_reports_update',
+                  'single_company_reports_delete'
               )
         ),
         'private_buckets', (
@@ -74,13 +118,14 @@ select jsonb_pretty(
                 jsonb_build_object(
                     'id', id,
                     'public', public,
-                    'file_size_limit', file_size_limit
+                    'file_size_limit', file_size_limit,
+                    'allowed_mime_types', allowed_mime_types
                 ) order by id
             )
             from storage.buckets
             where id in ('documents', 'reports')
         ),
-        'composite_tenant_foreign_keys', (
+        'composite_company_foreign_keys', (
             select jsonb_agg(constraint_name order by constraint_name)
             from information_schema.table_constraints
             where table_schema = 'public'
@@ -92,12 +137,22 @@ select jsonb_pretty(
                   'document_chunks_document_company_fkey'
               )
         ),
-        'embedding_dimension', (
-            select atttypmod
-            from pg_attribute
-            where attrelid = 'public.document_chunks'::regclass
-              and attname = 'embedding'
-              and not attisdropped
+        'embedding_type', (
+            select format_type(attribute.atttypid, attribute.atttypmod)
+            from pg_attribute as attribute
+            where attribute.attrelid = 'public.document_chunks'::regclass
+              and attribute.attname = 'embedding'
+              and not attribute.attisdropped
+        ),
+        'bootstrap', (
+            select jsonb_build_object(
+                'configured', true,
+                'consumed', consumed_at is not null,
+                'consumed_at', consumed_at,
+                'consumed_by', consumed_by
+            )
+            from private.bootstrap_control
+            where singleton_key
         )
     )
-) as tenant_isolation_verification;
+) as single_company_auth_verification;

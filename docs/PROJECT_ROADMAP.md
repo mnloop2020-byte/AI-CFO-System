@@ -4,7 +4,7 @@ Last updated: 2026-07-20
 
 ## Product direction
 
-Build a bilingual, multi-tenant AI CFO platform with live financial CRUD, reliable AI analysis, report generation, document retrieval, strong authentication, and production-grade security.
+Build a bilingual AI CFO platform with live financial CRUD, reliable AI analysis, report generation, document retrieval, strong authentication, and production-grade security. The current product is **Single Company + Multiple Users**; tenant-ready `company_id` relationships remain in the schema so a reviewed multi-company version can be introduced later without rebuilding the data model.
 
 ## Phase 1: Core platform
 
@@ -29,26 +29,28 @@ Status: substantially complete. A final manual responsive pass is still desirabl
 ## Phase 3: Functional integrations
 
 - Connect Reports to real agents and live financial data.
-- Generate PDFs and store report history. PDF generation is complete; the storage migration and history integration are next.
+- Generate PDFs and store report history. PDF generation and the remote table/private bucket are complete; metadata/file persistence and signed history downloads remain.
 - Connect chat conversation history. Complete: list, restore, new conversation, localized delete controls, and backend deletion support are connected.
 - Add RAG document upload. Complete for development use: private bucket, metadata/chunk model, validation, processing states, embeddings, company-scoped retrieval, sourced English/Arabic answers, and cascade deletion were verified without losing the four legacy documents.
 - Store invoice and expense attachments in Supabase Storage.
 - Refresh dashboard and page KPIs immediately after CRUD changes.
 - Connect Settings to backend company data.
 
-Status: in progress. Chat history and development-only RAG Document Upload are complete. Report persistence still awaits its remote migration. Authentication and tenant isolation are now the recommended priority before real document use.
+Status: in progress. Chat history, development-only RAG Document Upload, and the report-persistence schema/private bucket are complete. Report metadata/file integration remains.
 
-## Phase 4: Authentication, authorization, and tenancy
+## Phase 4: Single-company authentication and authorization
 
 - Implement real Supabase Auth.
-- Add email verification and real MFA.
-- Protect routes and sessions.
-- Add tenant isolation and Supabase RLS.
-- Add roles and permissions.
+- Add email verification and password reset; keep real MFA as a documented follow-up if it delays the secure foundation.
+- Protect routes and SSR sessions, send Bearer tokens to FastAPI, and return correct 401/403 responses.
+- Resolve the sole company only from verified membership; reject or ignore client-supplied `company_id`.
+- Add centralized `owner`, `admin`, `accountant`, and `viewer` roles and permissions.
+- Add one-time, server-configured Owner bootstrap and invitation-only admission for subsequent users.
+- Add RLS and private Storage policies scoped to the authenticated membership.
 - Add rate limiting and CAPTCHA.
 - Add audit logs and secure cookie/session controls.
 
-Status: pending. Current authentication screens are design-only.
+Status: in progress. Safety checkpoint `3bf4497` exists on `checkpoint/pre-single-company-auth-20260720`. The old multi-company migration is archived. The final Single Company migration is applied and audited; one confirmed Owner exists, Bootstrap is closed, RLS/private Storage are active, Service Role fallback is removed, and `/auth/me` plus basic 401/403/Owner access tests pass. Remaining work is frontend SSR/session completion, invitations, centralized FastAPI permission enforcement, and live Admin/Accountant/Viewer tests.
 
 ## Phase 5: AI reliability, final testing, and deployment
 
@@ -66,5 +68,7 @@ Status: pending.
 - Do not treat CORS as authentication.
 - Do not delete the core test records.
 - Do not claim file uploads, authentication, MFA, or report actions work before their real integrations exist.
+- Do not allow more than one company, expose a company switcher, or accept `company_id` from the frontend in the current product.
+- Do not expose the Supabase Service Role key or use it as a fallback for the public/publishable key.
 - Do not name a specific chat agent unless the backend returns that information.
 - Keep the current light visual design.
