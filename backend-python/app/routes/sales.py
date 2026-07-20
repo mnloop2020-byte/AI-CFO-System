@@ -1,5 +1,7 @@
-from fastapi import APIRouter , HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.security.authentication import require_permission
+from app.security.request_context import RequestContext
 from app.schemas.sales_schema import SaleCreate, SaleResponse, SaleUpdate  
 from app.services.sales_store import create_sale, get_sales , update_sale , delete_sale
 
@@ -7,7 +9,10 @@ router = APIRouter(prefix="/sales", tags=["Sales"])
 
 
 @router.post("", response_model=SaleResponse)
-def add_sale(sale: SaleCreate):
+def add_sale(
+    sale: SaleCreate,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     new_sale = create_sale(sale)
 
     return new_sale
@@ -15,14 +20,20 @@ def add_sale(sale: SaleCreate):
 
 
 @router.get("", response_model=list[SaleResponse])
-def list_sales():
+def list_sales(
+    _: RequestContext = Depends(require_permission("financial.read")),
+):
     sales = get_sales()
 
     return sales
     # Get all sales from Supabase.
 
 @router.patch("/{sale_id}", response_model=SaleResponse)
-def edit_sale(sale_id: str, sale: SaleUpdate):
+def edit_sale(
+    sale_id: str,
+    sale: SaleUpdate,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     try:
         updated_sale = update_sale(
             sale_id=sale_id,
@@ -40,7 +51,10 @@ def edit_sale(sale_id: str, sale: SaleUpdate):
         # Return 404 if the sale ID does not exist.
 
 @router.delete("/{sale_id}")
-def remove_sale(sale_id: str):
+def remove_sale(
+    sale_id: str,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     try:
         delete_sale(sale_id)
 

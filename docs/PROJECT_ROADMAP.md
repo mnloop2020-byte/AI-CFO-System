@@ -1,74 +1,79 @@
 # AI CFO System Roadmap
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 ## Product direction
 
-Build a bilingual AI CFO platform with live financial CRUD, reliable AI analysis, report generation, document retrieval, strong authentication, and production-grade security. The current product is **Single Company + Multiple Users**; tenant-ready `company_id` relationships remain in the schema so a reviewed multi-company version can be introduced later without rebuilding the data model.
+Build a bilingual AI CFO platform with live financial CRUD, reliable sourced analysis, private document retrieval, human-approved financial actions, and production-grade security. The deployed product is **Single Company + Multiple Users**. The `companies`, `company_members`, and `company_id` structure remains tenant-ready for a separately reviewed future multi-company release.
 
-## Phase 1: Core platform
+## Completed foundation
 
-- FastAPI and Supabase PostgreSQL integration.
-- CRUD for customers, sales, expenses, inventory, and invoices.
-- Dashboard KPIs from live backend data.
-- AI chat, conversation memory, base RAG, orchestrator, and specialist agents.
-- Next.js application shell and responsive light design.
+- FastAPI, Supabase PostgreSQL/pgvector, specialist agents, RAG, and live CRUD for customers, sales, expenses, inventory, and invoices.
+- Live Dashboard KPIs, AI chat, persisted conversation history, bilingual English/Arabic UI, RTL/LTR, and responsive light design.
+- Private RAG document upload with validation, processing states, embeddings, sourced answers, and safe cascade deletion.
+- Live report generation and PDF rendering. Report persistence and private downloads remain Phase 2 work.
 
-Status: substantially complete.
+## Phase 1: Single-company authentication and authorization
 
-## Phase 2: Arabic localization and UI quality
+- One `Development Company`; legacy records are assigned without deletion.
+- Real Supabase Auth login/logout and email verification.
+- Secure SSR-aware route protection and Bearer tokens verified by FastAPI.
+- Database-backed `owner`, `admin`, `accountant`, and `viewer` permissions.
+- One-time Owner Bootstrap, now consumed and closed.
+- Invitation-only admission with exact-email binding, expiry, SHA-256-only token storage, and one-time consumption.
+- Member and invitation management for Owner/Admin.
+- Real password reset and protected Auth callbacks without open redirects.
+- RLS for company data and private Storage role policies.
+- Real identity and role in Header/Profile.
+- Backend, TypeScript, production-build, role, invitation, RLS, and Storage checks.
 
-- Translate all pages, tables, forms, messages, filters, dialogs, and accessibility labels.
-- Preserve English API values while presenting localized labels.
-- Verify LTR and RTL layouts.
-- Test responsive behavior in Arabic and English.
-- Run a production build after localization is complete.
+Status: **complete**. MFA is intentionally deferred to the later security-hardening stage. Rate limiting, CAPTCHA, expanded audit logs, and advanced session controls also remain later hardening work.
 
-Status: substantially complete. A final manual responsive pass is still desirable.
+## Phase 2: Complete prior functional integrations
 
-## Phase 3: Functional integrations
+Execute and test each item in this order:
 
-- Connect Reports to real agents and live financial data.
-- Generate PDFs and store report history. PDF generation and the remote table/private bucket are complete; metadata/file persistence and signed history downloads remain.
-- Connect chat conversation history. Complete: list, restore, new conversation, localized delete controls, and backend deletion support are connected.
-- Add RAG document upload. Complete for development use: private bucket, metadata/chunk model, validation, processing states, embeddings, company-scoped retrieval, sourced English/Arabic answers, and cascade deletion were verified without losing the four legacy documents.
-- Store invoice and expense attachments in Supabase Storage.
-- Refresh dashboard and page KPIs immediately after CRUD changes.
-- Connect Settings to backend company data.
+1. Connect Settings to the real single company through FastAPI and RLS.
+2. Persist generated PDF reports in the private `reports` bucket and `reports` table.
+3. Display real report history and provide short-lived signed/protected downloads.
+4. Store invoice and expense attachments in private Storage.
+5. Refresh Dashboard and page KPIs immediately after CRUD without manual refresh.
+6. Improve CEO Agent grounding so figures and conclusions come only from verified data, with clear sources where appropriate.
 
-Status: in progress. Chat history, development-only RAG Document Upload, and the report-persistence schema/private bucket are complete. Report metadata/file integration remains.
+Status: pending. Do not begin automatically from the Phase 1 checkpoint.
 
-## Phase 4: Single-company authentication and authorization
+## Phase 3: AI Financial Action Center
 
-- Implement real Supabase Auth.
-- Add email verification and password reset; keep real MFA as a documented follow-up if it delays the secure foundation.
-- Protect routes and SSR sessions, send Bearer tokens to FastAPI, and return correct 401/403 responses.
-- Resolve the sole company only from verified membership; reject or ignore client-supplied `company_id`.
-- Add centralized `owner`, `admin`, `accountant`, and `viewer` roles and permissions.
-- Add one-time, server-configured Owner bootstrap and invitation-only admission for subsequent users.
-- Add RLS and private Storage policies scoped to the authenticated membership.
-- Add rate limiting and CAPTCHA.
-- Add audit logs and secure cookie/session controls.
+- Deterministic Python detection rules with AI used for explanation, never invented numbers.
+- Traceable evidence, source type/id, financial impact, owner, due date, approval requirement, status, and audit history.
+- Idempotency and deduplication; no automatic email, payment, purchase, or external financial action.
+- First use cases: overdue-invoice collection drafts, low-stock review, and flagged/unusual expense review against RAG policy when available.
+- Bilingual RTL/LTR UI for summaries, filters, details, evidence, assignment, approval/rejection, status changes, completion, and timelines.
 
-Status: in progress. Safety checkpoint `3bf4497` exists on `checkpoint/pre-single-company-auth-20260720`. The old multi-company migration is archived. The final Single Company migration is applied and audited; one confirmed Owner exists, Bootstrap is closed, RLS/private Storage are active, Service Role fallback is removed, and `/auth/me` plus basic 401/403/Owner access tests pass. Remaining work is frontend SSR/session completion, invitations, centralized FastAPI permission enforcement, and live Admin/Accountant/Viewer tests.
+Status: pending until Phase 2 is stable.
 
-## Phase 5: AI reliability, final testing, and deployment
+## Phase 4: Security and quality hardening
 
-- Improve CEO Agent grounding and prevent unsupported conclusions.
-- Add backend, frontend, security, tenancy, and regression tests.
-- Complete production readiness checks.
-- Deploy the application and monitor it.
+- Audit logs, rate limiting, CAPTCHA where appropriate, upload defenses, and RAG prompt-injection mitigation.
+- Timeouts/retries for external services, structured logging, and safe error handling.
+- Expanded backend/frontend tests, RLS/role tests, Arabic/English responsive checks, production build, Python compilation, and end-to-end scenarios.
+- Real MFA and advanced session management.
+
+Status: pending.
+
+## Phase 5: Deployment
+
+Deployment requires successful Auth, RLS, Storage policies, role tests, backup verification, PDF reports, RAG, Action Center, and final end-to-end tests.
 
 Status: pending.
 
 ## Project safeguards
 
-- Do not run `npm audit fix --force`.
-- Do not replace live FastAPI/Supabase integrations with static data.
-- Do not treat CORS as authentication.
-- Do not delete the core test records.
-- Do not claim file uploads, authentication, MFA, or report actions work before their real integrations exist.
-- Do not allow more than one company, expose a company switcher, or accept `company_id` from the frontend in the current product.
-- Do not expose the Supabase Service Role key or use it as a fallback for the public/publishable key.
-- Do not name a specific chat agent unless the backend returns that information.
-- Keep the current light visual design.
+- Never run `npm audit fix --force`.
+- Never replace live FastAPI/Supabase integrations with static data.
+- Never treat CORS as authentication.
+- Never delete the core financial test records or four legacy RAG documents.
+- Never allow a second company, expose a company switcher, or accept `company_id` from the frontend in the current product.
+- Never expose the Supabase Service Role key or use it as a public-key fallback.
+- Never send email, make a payment or purchase, or execute an external financial action without explicit human approval.
+- Keep the current bilingual light visual design.

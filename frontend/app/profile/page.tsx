@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -17,6 +17,8 @@ import {
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { getAuthMe, type AuthMe } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 
 const inputClasses =
   "h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text-primary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary-soft";
@@ -25,10 +27,43 @@ export default function ProfilePage() {
   const { language, setLanguage } = useLanguage();
   const isArabic = language === "ar";
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
+  const [identity, setIdentity] = useState<AuthMe | null>(null);
+  const [fullName, setFullName] = useState("");
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    const supabase = createClient();
+    void Promise.all([getAuthMe(), supabase.auth.getUser()]).then(
+      ([authIdentity, { data }]) => {
+        setIdentity(authIdentity);
+        const metadataName = data.user?.user_metadata?.full_name;
+        setFullName(
+          typeof metadataName === "string" && metadataName.trim()
+            ? metadataName.trim()
+            : authIdentity.email.split("@")[0],
+        );
+      },
+    );
+  }, []);
+
+  const roleLabel = identity
+    ? isArabic
+      ? {
+          owner: "المالك",
+          admin: "المدير",
+          accountant: "المحاسب",
+          viewer: "المشاهد",
+        }[identity.role]
+      : identity.role
+    : isArabic
+      ? "جارٍ التحميل"
+      : "Loading";
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setPreviewSubmitted(true);
+    const { error } = await createClient().auth.updateUser({
+      data: { full_name: fullName.trim() },
+    });
+    setPreviewSubmitted(!error);
   };
 
   return (
@@ -50,13 +85,13 @@ export default function ProfilePage() {
             <section className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-xl font-semibold text-primary">
-                  M
+                  {(fullName || identity?.email || "U").slice(0, 1).toUpperCase()}
                 </div>
 
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="text-xl font-semibold text-text-primary">
-                      {isArabic ? "محمد" : "Mohammed"}
+                      {fullName || (isArabic ? "المستخدم" : "User")}
                     </h1>
 
                     <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-1 text-xs font-medium text-success">
@@ -66,22 +101,18 @@ export default function ProfilePage() {
                   </div>
 
                   <p className="mt-1 text-sm text-text-secondary">
-                    {isArabic ? "مدير الشركة" : "Company Administrator"}
+                    {roleLabel}
                   </p>
 
                   <p className="mt-1 flex items-center gap-2 text-xs text-text-secondary">
                     <Mail size={14} />
-                    {isArabic
-                      ? "سيتم جلب البريد الإلكتروني من Supabase Auth"
-                      : "Email will come from Supabase Auth"}
+                    {identity?.email ?? (isArabic ? "جارٍ التحميل..." : "Loading...")}
                   </p>
                 </div>
               </div>
 
               <div className="rounded-xl border border-blue-100 bg-primary-soft px-4 py-3 text-sm text-text-secondary">
-                {isArabic
-                  ? "معلومات الملف الشخصي معاينة تصميمية حاليًا."
-                  : "Profile information is currently a design preview."}
+                {identity?.company_name ?? (isArabic ? "شركة التطوير" : "Development Company")}
               </div>
             </section>
 
@@ -97,8 +128,8 @@ export default function ProfilePage() {
 
                 <p>
                   {isArabic
-                    ? "تم إرسال تغييرات الملف الشخصي كمعاينة فقط، ولم تُحفظ أي معلومات للحساب."
-                    : "Profile changes were submitted as a preview only. No account information was stored."}
+                    ? "تم حفظ الاسم في حساب Supabase Auth."
+                    : "The name was saved to the Supabase Auth account."}
                 </p>
               </div>
             ) : null}
@@ -135,7 +166,8 @@ export default function ProfilePage() {
                     <input
                       type="text"
                       name="fullName"
-                      defaultValue={isArabic ? "محمد" : "Mohammed"}
+                      value={fullName}
+                      onChange={(event) => setFullName(event.target.value)}
                       className={inputClasses}
                     />
                   </label>
@@ -148,7 +180,8 @@ export default function ProfilePage() {
                     <input
                       type="text"
                       name="jobTitle"
-                      defaultValue={isArabic ? "مدير النظام" : "Administrator"}
+                      value={roleLabel}
+                      readOnly
                       className={inputClasses}
                     />
                   </label>
@@ -162,11 +195,8 @@ export default function ProfilePage() {
                       type="email"
                       name="email"
                       dir="ltr"
-                      placeholder={
-                        isArabic
-                          ? "سيتم ربطه من خلال المصادقة"
-                          : "Connected through authentication"
-                      }
+                      value={identity?.email ?? ""}
+                      readOnly
                       className={inputClasses}
                     />
                   </label>
@@ -210,7 +240,7 @@ export default function ProfilePage() {
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
                   >
                     <Save size={18} />
-                    {isArabic ? "إرسال المعاينة" : "Submit preview"}
+                    {isArabic ? "حفظ الاسم" : "Save name"}
                   </button>
                 </footer>
               </form>
@@ -288,8 +318,8 @@ export default function ProfilePage() {
 
                           <p className="mt-1 text-xs leading-5 text-text-secondary">
                             {isArabic
-                              ? "ستتوفر معلومات الجلسات بعد ربط نظام المصادقة."
-                              : "Session information will be available after authentication integration."}
+                              ? "الجلسة الحالية محمية عبر Supabase Auth وCookies آمنة."
+                              : "The current session is protected by Supabase Auth and secure cookies."}
                           </p>
                         </div>
                       </div>
@@ -344,7 +374,7 @@ export default function ProfilePage() {
                       </p>
 
                       <p className="mt-1 font-medium text-text-primary">
-                        {isArabic ? "مدير النظام" : "Administrator"}
+                        {roleLabel}
                       </p>
                     </div>
                   </div>

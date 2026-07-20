@@ -7,9 +7,15 @@ from dataclasses import dataclass
 @dataclass(frozen=True, slots=True)
 class RequestContext:
     user_id: str
+    email: str
     company_id: str
+    company_name: str
     company_role: str
+    permissions: frozenset[str]
     access_token: str
+
+    def has_permission(self, permission: str) -> bool:
+        return permission in self.permissions
 
 
 _request_context: ContextVar[RequestContext | None] = ContextVar(

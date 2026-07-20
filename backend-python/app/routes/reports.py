@@ -1,7 +1,7 @@
 import logging
 from io import BytesIO
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from app.schemas.report_schema import (
@@ -12,6 +12,8 @@ from app.schemas.report_schema import (
     StoredReport,
     StoreReportRequest,
 )
+from app.security.authentication import require_permission
+from app.security.request_context import RequestContext
 from app.services.report_pdf_service import (
     build_report_filename,
     create_report_pdf,
@@ -36,6 +38,7 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 )
 def generate_financial_report(
     request: GenerateReportRequest,
+    _: RequestContext = Depends(require_permission("reports.write")),
 ) -> GenerateReportResponse:
     try:
         return generate_report(request)
@@ -54,6 +57,7 @@ def generate_financial_report(
 @router.post("/pdf", response_class=StreamingResponse)
 def download_report_pdf(
     request: CreateReportPdfRequest,
+    _: RequestContext = Depends(require_permission("reports.write")),
 ) -> StreamingResponse:
     try:
         pdf_bytes = create_report_pdf(
@@ -94,6 +98,7 @@ def download_report_pdf(
 )
 def save_financial_report(
     request: StoreReportRequest,
+    _: RequestContext = Depends(require_permission("reports.write")),
 ) -> StoredReport:
     try:
         return store_report(request)
@@ -110,7 +115,9 @@ def save_financial_report(
 
 
 @router.get("", response_model=list[StoredReport])
-def get_stored_reports() -> list[StoredReport]:
+def get_stored_reports(
+    _: RequestContext = Depends(require_permission("reports.read")),
+) -> list[StoredReport]:
     try:
         return list_reports()
     except Exception as error:
@@ -128,6 +135,7 @@ def get_stored_reports() -> list[StoredReport]:
 )
 def get_report_download(
     report_id: UUID,
+    _: RequestContext = Depends(require_permission("reports.read")),
 ) -> ReportDownloadResponse:
     try:
         return create_report_download(report_id)

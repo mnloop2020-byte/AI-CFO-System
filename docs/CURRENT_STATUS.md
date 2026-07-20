@@ -1,6 +1,6 @@
 # AI CFO System Current Status
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 ## Completed localization
 
@@ -12,8 +12,8 @@ Last updated: 2026-07-20
 - Invoices page, table, and form; TypeScript, route compilation, HTTP response, and live API values were verified.
 - Reports page, templates, preview dialog, and report-history placeholder are localized. Live agent execution and PDF download are connected; report persistence remains pending.
 - Settings page and company-settings form; TypeScript and the running route were verified. The UI remains a clearly labelled design preview until backend company settings are implemented.
-- Profile and Security page; language selection is connected to the existing language provider, while profile saving, MFA, and session management remain clearly labelled as unconnected previews. TypeScript and the running route were verified.
-- Authentication UI: Login, Register, MFA, and Forgot Password now support English/Arabic, LTR/RTL, localized accessibility labels, and explicit design-preview messaging. Existing validation rules were preserved; TypeScript and all four running routes were verified.
+- Profile and Security now displays the authenticated Supabase user, company, and database-backed role. The user's display name can be updated in Auth metadata. MFA and advanced session management remain explicitly deferred.
+- Authentication UI now provides real login/logout, invitation-only registration, email confirmation callback handling, password recovery, and password update in English/Arabic with protected redirects.
 - Shared modal accessibility labels and unique dialog title/description IDs were localized.
 - Previously missed Chat and Customers page headers were localized.
 - Production build completed successfully, generating all 19 routes.
@@ -47,8 +47,15 @@ Last updated: 2026-07-20
 - The sole-company unique index/check are valid, authenticated users cannot insert companies or memberships directly, and the centralized `owner`, `admin`, `accountant`, and `viewer` permission sets exist.
 - Owner Bootstrap completed once with one confirmed Auth user and one Owner membership. The bootstrap record is consumed and closed; no unexpected user, membership, Owner, or company was created.
 - Correct publishable keys are configured in ignored backend/frontend environment files. The backend Service Role fallback was removed.
-- `GET /auth/me` is implemented. Live tests passed for Owner role/company resolution, unauthenticated and invalid-token 401 responses, isolated missing-membership 403 handling, and Owner reads of all preserved Customers, Sales, Expenses, Inventory, and Invoices.
-- Python compilation and the Next.js 15 production build passed after the Auth foundation changes. The existing virtual environment does not include `pytest`, so the pytest suite was not run in this checkpoint.
+- `GET /auth/me` returns the real user email, single company, role, and centralized permissions. Live tests passed for Owner role/company resolution, unauthenticated and invalid-token 401 responses, isolated missing-membership 403 handling, and Owner reads of all preserved Customers, Sales, Expenses, Inventory, and Invoices.
+- Secure one-time invitations were added by `20260720223000_add_secure_single_company_invitations.sql` with approved SHA-256 `24D0CA5D640E52D98250B8262DD5B8DEC70288CB58FFFBABC2EC5956DDF208DA`. It was applied once to `tjadermimgzncdvfjpra`; its unique SHA-256 token hashes, Auth admission triggers, policies, and unchanged business counts were verified.
+- Owner and Admin can create invitations for `admin`, `accountant`, and `viewer`. Raw tokens are returned once in a URL fragment, are never stored, must match the invited email, expire, and are claimed only once. Public company registration remains closed.
+- FastAPI now reads role permissions from the database `get_my_auth_context` function and enforces them on financial, chat, document, report, member, and invitation routes. The frontend never sends or selects `company_id`.
+- The bilingual Members & Invitations page supports listing members/invitations, creating and revoking invitations, updating roles, and removing members. PostgreSQL protects every Owner from Admin modification and prevents removal or demotion of the last Owner.
+- Live authorization checks passed for Owner, Admin, Accountant, and Viewer; Viewer writes and Accountant member management were denied, Accountant financial/Storage writes were allowed, a second company was rejected, and wrong-email/expired/used invitations were rejected.
+- Private Storage role tests passed. The temporary object created by the check was removed; no existing object or business record was deleted.
+- Development dependencies are isolated in `requirements-dev.txt`. Pytest reports 12 passed tests, Python compilation passes, TypeScript passes, and the Next.js 15.5.19 production build generated all 23 routes successfully.
+- MFA remains a documented later security stage so it does not delay the completed authentication and authorization foundation.
 
 ## Current live test records to preserve
 
@@ -59,18 +66,16 @@ Last updated: 2026-07-20
 
 ## Current checkpoint
 
-Active application localization and the production build are complete. Chat conversation history is also complete and visually verified in the local application.
+Phase 1 — Single Company Authentication — is complete. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
 
-Report persistence database and private-bucket prerequisites now exist. Storing generated PDF metadata/files and presenting signed history downloads are the next report tasks.
+Work is intentionally stopped before Phase 2. The approved next order is:
 
-RAG Document Upload and the Single Company authentication foundation are complete. Next:
-
-1. Finish frontend SSR route protection, real Header/Profile identity, logout, verification/reset flows, and invitation management.
-2. Enforce centralized permissions in FastAPI and run live Admin/Accountant/Viewer authorization tests.
-3. Store report PDFs/history and invoice/expense attachments in private Storage.
-4. Refresh dashboard KPIs immediately after CRUD operations.
-5. Connect Settings to the one company record.
-6. Add rate limiting, audit logs, MFA, and additional session protection.
+1. Connect Settings to the one real company record.
+2. Complete PDF report persistence, private Storage, history, and protected downloads.
+3. Connect invoice and expense attachments to private Storage.
+4. Refresh Dashboard KPIs immediately after CRUD operations.
+5. Harden CEO Agent claims and source attribution.
+6. Begin AI Financial Action Center only after the preceding Phase 2 work is stable.
 
 ## Verification note
 

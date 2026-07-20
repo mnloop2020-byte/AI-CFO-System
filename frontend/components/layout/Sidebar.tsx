@@ -108,6 +108,14 @@ function SidebarContent({
       title: t("system"),
       items: [
         {
+          label:
+            language === "ar"
+              ? "الأعضاء والدعوات"
+              : "Members & invitations",
+          href: "/members",
+          icon: Users,
+        },
+        {
           label: t("settings"),
           href: "/settings",
           icon: Settings,
@@ -216,7 +224,7 @@ function SidebarContent({
 
             <span>
               <span className="block text-sm font-semibold text-text-primary">
-                Mohammed
+                {language === "ar" ? "الحساب" : "Account"}
               </span>
 
               <span className="block text-xs text-text-secondary">

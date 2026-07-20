@@ -1,7 +1,9 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.security.authentication import require_permission
+from app.security.request_context import RequestContext
 from app.schemas.chat_schema import (
     ChatMessage,
     ChatRequest,
@@ -23,7 +25,10 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 @router.post("", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
+def chat(
+    request: ChatRequest,
+    _: RequestContext = Depends(require_permission("chat.use")),
+) -> ChatResponse:
     try:
         reply, conversation_id, sources = handle_chat(
             message=request.message,
@@ -46,7 +51,9 @@ def chat(request: ChatRequest) -> ChatResponse:
     "/conversations",
     response_model=list[ConversationSummary],
 )
-def list_conversations() -> list[ConversationSummary]:
+def list_conversations(
+    _: RequestContext = Depends(require_permission("chat.use")),
+) -> list[ConversationSummary]:
     try:
         return get_conversations()
     except Exception as error:
@@ -61,7 +68,10 @@ def list_conversations() -> list[ConversationSummary]:
     "/{conversation_id}/messages",
     response_model=list[ChatMessage],
 )
-def get_chat_messages(conversation_id: str) -> list[ChatMessage]:
+def get_chat_messages(
+    conversation_id: str,
+    _: RequestContext = Depends(require_permission("chat.use")),
+) -> list[ChatMessage]:
     try:
         if not conversation_exists(conversation_id):
             raise HTTPException(
@@ -88,6 +98,7 @@ def get_chat_messages(conversation_id: str) -> list[ChatMessage]:
 )
 def remove_conversation(
     conversation_id: str,
+    _: RequestContext = Depends(require_permission("chat.use")),
 ) -> DeleteConversationResponse:
     try:
         if not delete_conversation(conversation_id):

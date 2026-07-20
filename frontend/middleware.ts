@@ -1,9 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getSafeNextPath } from "@/lib/auth/redirect";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 
-const AUTH_PATHS = ["/login", "/register"];
+const AUTH_ENTRY_PATHS = [
+  "/login",
+  "/login/forgot-password",
+  "/register",
+];
+const PASSWORD_UPDATE_PATH = "/login/reset-password";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -30,13 +36,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAuthPath = AUTH_PATHS.some(
-    (path) =>
-      request.nextUrl.pathname === path ||
-      request.nextUrl.pathname.startsWith(`${path}/`),
+  const isAuthEntryPath = AUTH_ENTRY_PATHS.includes(
+    request.nextUrl.pathname,
   );
+  const isPasswordUpdatePath =
+    request.nextUrl.pathname === PASSWORD_UPDATE_PATH;
 
-  if (!user && !isAuthPath) {
+  if (!user && !isAuthEntryPath) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set(
@@ -46,10 +52,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (user && isAuthPath) {
+  if (user && isAuthEntryPath && !isPasswordUpdatePath) {
     const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    dashboardUrl.search = "";
+    const nextPath = getSafeNextPath(
+      request.nextUrl.searchParams.get("next"),
+    );
+    const safeDestination = new URL(nextPath, request.url);
+    dashboardUrl.pathname = safeDestination.pathname;
+    dashboardUrl.search = safeDestination.search;
+    dashboardUrl.hash = safeDestination.hash;
     return NextResponse.redirect(dashboardUrl);
   }
 
@@ -64,6 +75,7 @@ export const config = {
     "/documents/:path*",
     "/reports/:path*",
     "/settings/:path*",
+    "/members/:path*",
     "/profile/:path*",
     "/login/:path*",
     "/register/:path*",

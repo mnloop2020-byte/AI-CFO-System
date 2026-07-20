@@ -1,5 +1,7 @@
-from fastapi import APIRouter , HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.security.authentication import require_permission
+from app.security.request_context import RequestContext
 from app.schemas.invoices_schema import InvoiceCreate, InvoiceResponse
 from app.services.invoices_store import (
     create_invoice,
@@ -12,7 +14,10 @@ router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 
 @router.post("", response_model=InvoiceResponse)
-def add_invoice(invoice: InvoiceCreate):
+def add_invoice(
+    invoice: InvoiceCreate,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     new_invoice = create_invoice(invoice)
 
     return new_invoice
@@ -20,7 +25,9 @@ def add_invoice(invoice: InvoiceCreate):
 
 
 @router.get("", response_model=list[InvoiceResponse])
-def list_invoices():
+def list_invoices(
+    _: RequestContext = Depends(require_permission("financial.read")),
+):
     invoices = get_invoices()
 
     return invoices
@@ -30,7 +37,11 @@ def list_invoices():
 
 
 @router.patch("/{invoice_id}", response_model=InvoiceResponse)
-def edit_invoice(invoice_id: str, invoice: InvoiceUpdate):
+def edit_invoice(
+    invoice_id: str,
+    invoice: InvoiceUpdate,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     try:
         updated_invoice = update_invoice(
             invoice_id=invoice_id,
@@ -48,7 +59,10 @@ def edit_invoice(invoice_id: str, invoice: InvoiceUpdate):
         # Return 404 if the invoice ID does not exist.
 
 @router.delete("/{invoice_id}")
-def remove_invoice(invoice_id: str):
+def remove_invoice(
+    invoice_id: str,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     try:
         delete_invoice(invoice_id)
 

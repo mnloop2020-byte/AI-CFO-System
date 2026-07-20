@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from fastapi import Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
@@ -11,7 +11,10 @@ from app.security.request_context import (
     reset_request_context,
     set_request_context,
 )
-from app.services.supabase_client import get_service_supabase_client
+from app.services.supabase_client import (
+    get_service_supabase_client,
+    get_token_supabase_client,
+)
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -33,25 +36,21 @@ def _resolve_request_context(access_token: str) -> RequestContext:
     if user is None:
         raise ValueError("Invalid or expired access token")
 
-    membership_response = (
-        service_client.table("company_members")
-        .select("company_id,role,is_default")
-        .eq("user_id", str(user.id))
-        .order("is_default", desc=True)
-        .order("created_at")
-        .limit(1)
-        .execute()
-    )
-    if not membership_response.data:
+    user_client = get_token_supabase_client(access_token)
+    auth_context_response = user_client.rpc("get_my_auth_context").execute()
+    if not auth_context_response.data:
         raise MissingCompanyMembershipError(
             "The authenticated user does not belong to a company."
         )
 
-    membership = membership_response.data[0]
+    auth_context = auth_context_response.data[0]
     return RequestContext(
         user_id=str(user.id),
-        company_id=str(membership["company_id"]),
-        company_role=str(membership["role"]),
+        email=str(user.email or ""),
+        company_id=str(auth_context["company_id"]),
+        company_name=str(auth_context["company_name"]),
+        company_role=str(auth_context["role"]),
+        permissions=frozenset(auth_context.get("permissions") or []),
         access_token=access_token,
     )
 
@@ -93,3 +92,21 @@ async def require_authenticated_request(
         yield context
     finally:
         reset_request_context(token)
+
+
+def require_permission(
+    permission: str,
+) -> Callable[..., RequestContext]:
+    """Build a FastAPI dependency backed by the database permission matrix."""
+
+    async def permission_dependency(
+        context: RequestContext = Depends(require_authenticated_request),
+    ) -> RequestContext:
+        if not context.has_permission(permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Permission required: {permission}",
+            )
+        return context
+
+    return permission_dependency

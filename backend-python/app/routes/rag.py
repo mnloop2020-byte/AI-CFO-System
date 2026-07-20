@@ -3,6 +3,7 @@ import logging
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Depends,
     File,
     HTTPException,
     UploadFile,
@@ -10,6 +11,8 @@ from fastapi import (
 )
 
 from app.config.settings import RAG_MAX_FILE_SIZE_BYTES
+from app.security.authentication import require_permission
+from app.security.request_context import RequestContext
 from app.rag.extract import validate_document_file
 from app.rag.ingest import process_document
 from app.schemas.rag_schema import (
@@ -37,6 +40,7 @@ router = APIRouter(prefix="/rag", tags=["RAG documents"])
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    _: RequestContext = Depends(require_permission("documents.write")),
 ) -> UploadDocumentResponse:
     content = await file.read(RAG_MAX_FILE_SIZE_BYTES + 1)
     try:
@@ -79,7 +83,9 @@ async def upload_document(
 
 
 @router.get("/documents", response_model=list[DocumentResponse])
-def get_documents() -> list[DocumentResponse]:
+def get_documents(
+    _: RequestContext = Depends(require_permission("documents.read")),
+) -> list[DocumentResponse]:
     try:
         return list_documents()
     except Exception as error:
@@ -94,7 +100,10 @@ def get_documents() -> list[DocumentResponse]:
 
 
 @router.get("/documents/{document_id}", response_model=DocumentResponse)
-def get_document_status(document_id: str) -> DocumentResponse:
+def get_document_status(
+    document_id: str,
+    _: RequestContext = Depends(require_permission("documents.read")),
+) -> DocumentResponse:
     try:
         document = get_document(document_id)
     except Exception as error:
@@ -115,7 +124,10 @@ def get_document_status(document_id: str) -> DocumentResponse:
     "/documents/{document_id}",
     response_model=DeleteDocumentResponse,
 )
-def remove_document(document_id: str) -> DeleteDocumentResponse:
+def remove_document(
+    document_id: str,
+    _: RequestContext = Depends(require_permission("documents.write")),
+) -> DeleteDocumentResponse:
     try:
         deleted = delete_document(document_id)
     except Exception as error:

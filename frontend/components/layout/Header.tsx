@@ -21,6 +21,7 @@ import {
 } from "react";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { getAuthMe, type CompanyRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 
 type HeaderProps = {
@@ -42,6 +43,7 @@ const titleKeys: Record<string, string> = {
 const arabicTitles: Record<string, string> = {
   "Financial Overview": "النظرة المالية",
   "Company Settings": "إعدادات الشركة",
+  "Members and invitations": "الأعضاء والدعوات",
 };
 
 const arabicDescriptions: Record<string, string> = {
@@ -94,6 +96,7 @@ export default function Header({
     useState(false);
 
   const [accountName, setAccountName] = useState("User");
+  const [accountRole, setAccountRole] = useState<CompanyRole | null>(null);
 
   const notificationsRef =
     useRef<HTMLDivElement | null>(null);
@@ -141,15 +144,17 @@ export default function Header({
 
   useEffect(() => {
     const supabase = createClient();
-    void supabase.auth.getUser().then(({ data }) => {
-      const fullName = data.user?.user_metadata?.full_name;
-      const email = data.user?.email;
-      setAccountName(
-        typeof fullName === "string" && fullName.trim()
-          ? fullName.trim()
-          : email?.split("@")[0] ?? "User",
-      );
-    });
+    void Promise.all([supabase.auth.getUser(), getAuthMe()])
+      .then(([{ data }, identity]) => {
+        const fullName = data.user?.user_metadata?.full_name;
+        setAccountName(
+          typeof fullName === "string" && fullName.trim()
+            ? fullName.trim()
+            : identity.email.split("@")[0] || "User",
+        );
+        setAccountRole(identity.role);
+      })
+      .catch(() => undefined);
   }, []);
 
   async function signOut() {
@@ -226,6 +231,17 @@ export default function Header({
               "bg-primary-soft text-primary",
           },
         ];
+
+  const displayedRole = accountRole
+    ? language === "ar"
+      ? {
+          owner: "المالك",
+          admin: "المدير",
+          accountant: "المحاسب",
+          viewer: "المشاهد",
+        }[accountRole]
+      : accountRole
+    : t("administrator");
 
   function openMobileSidebar() {
     window.dispatchEvent(
@@ -419,7 +435,7 @@ export default function Header({
               </span>
 
               <span className="block text-xs text-text-secondary">
-                {t("administrator")}
+                {displayedRole}
               </span>
             </span>
 
