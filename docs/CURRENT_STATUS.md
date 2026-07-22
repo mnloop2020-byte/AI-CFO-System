@@ -66,12 +66,12 @@ Last updated: 2026-07-22
 
 ## Current checkpoint
 
-Phase 1 — Single Company Authentication — and Phase 2 functional integrations are complete. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
+Phase 1 — Single Company Authentication —, Phase 2 functional integrations, and the core Phase 3 Financial Action Center are complete. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
 
 The next implementation order is:
 
-1. Build the AI Financial Action Center database and deterministic engine.
-2. Add the three approved action lifecycles and bilingual interface.
+1. Complete the three Action Center use-case refinements and value attribution.
+2. Apply security/reliability hardening and run the final delivery suite.
 
 ## Phase 2 progress
 
@@ -94,6 +94,15 @@ The next implementation order is:
 - Verified payloads now include trusted company currency/tax context, explicit availability flags, source tables, source record IDs, and calculation descriptions. Financial replies receive a deterministic source footer.
 - A post-generation guard rejects numeric claims absent from the verified payload, unconfigured currency symbols, and unavailable bank-balance, final-net-profit, or net-VAT claims. Rejected narratives are replaced by a deterministic data-only fallback rather than shown to the user.
 - The user's existing `accounting_agent.py` edit remains untouched; Accounting output is guarded centrally by the Orchestrator. All 32 backend tests and Python compilation pass, including new unsupported-claim and deterministic-calculation tests.
+
+## Phase 3 progress
+
+- **The Financial Action Center core is complete.** Migrations `20260722100000_create_financial_action_center.sql` and `20260722103000_harden_financial_action_lifecycle.sql` created RLS-protected actions/events, centralized role permissions, status validation, audit events, approval expiry, deduplication, and execution idempotency without changing protected business counts.
+- The approval test exposed an unqualified pgcrypto call under an empty `search_path`. Corrective migration `20260722113000_fix_financial_action_approval_hash.sql` changed only that call to `extensions.digest`; its audit confirms identical before/after counts.
+- The deterministic engine detects overdue unpaid invoices, low inventory, and flagged expenses from RLS-scoped records. It records evidence, source IDs, calculated impact, bilingual recommendations, and safe drafts with external execution disabled.
+- The bilingual `/actions` interface provides KPI summaries, search/filtering, evidence/source links, assignment, draft editing, approval/rejection, deferral, completion, and an event timeline with responsive RTL/LTR layout.
+- Live authorization tests passed: Viewer is read-only; Accountant can detect/update but cannot assign or approve; Admin can assign and approve. Fake `company_id` is rejected, unauthenticated access returns `401`, repeated detection creates no duplicate, execution retries replay idempotently, and no email, payment, or purchase is executed.
+- Current development data contains three traceable actions derived from the preserved invoice, low-stock item, and flagged expense. All 36 backend tests and Python compilation pass; TypeScript and the Next.js production build compile successfully.
 
 ## Verification note
 

@@ -5,6 +5,7 @@ import {
   FileText,
   Files,
   LayoutDashboard,
+  ListTodo,
   MessageSquareText,
   Package,
   ReceiptText,
@@ -53,6 +54,14 @@ function SidebarContent({
           label: t("aiCfoChat"),
           href: "/chat",
           icon: MessageSquareText,
+        },
+        {
+          label:
+            language === "ar"
+              ? "مركز الإجراءات المالية"
+              : "Financial actions",
+          href: "/actions",
+          icon: ListTodo,
         },
       ],
     },

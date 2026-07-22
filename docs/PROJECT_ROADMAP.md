@@ -50,7 +50,7 @@ Status: **complete**. Company Settings, persisted private PDF reports, private f
 - First use cases: overdue-invoice collection drafts, low-stock review, and flagged/unusual expense review against RAG policy when available.
 - Bilingual RTL/LTR UI for summaries, filters, details, evidence, assignment, approval/rejection, status changes, completion, and timelines.
 
-Status: next. Phase 2 is stable and the Action Center database/engine is the next implementation target.
+Status: **core complete**. The database, deterministic engine, RLS/permissions, audit lifecycle, idempotency, and bilingual interface are implemented. The three use-case refinements and value measurement continue in the next stage.
 
 ## Phase 4: Security and quality hardening
 
