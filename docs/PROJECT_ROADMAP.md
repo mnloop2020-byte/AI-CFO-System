@@ -80,7 +80,7 @@ Status: **Pilot-complete**. Audit events, route rate limits, upload/RAG safeguar
 
 - Full backend, Auth/roles, RLS/Storage, action lifecycle, idempotency, upload, RAG security, financial-calculation, frontend, bilingual, responsive, and end-to-end checks.
 
-Status: pending.
+Status: **complete for Pilot**. Automated backend/financial/RAG/upload/security tests, live Auth/role/RLS/Storage/Action checks, TypeScript, production build, and bilingual responsive browser checks passed.
 
 ## Phase 8: Delivery and deployment readiness
 

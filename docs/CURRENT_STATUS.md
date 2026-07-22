@@ -132,6 +132,14 @@ The next implementation order is:
 - Liveness/readiness endpoints pass. Backup and isolated restore-rehearsal procedures are documented in `docs/SECURITY_OPERATIONS.md`; no destructive restore was run. The backend suite reports 44 passing tests, Python compilation passes, TypeScript passes, and a new production build ID was generated.
 - Production limitation: the current limiter is process-local and must be replaced with a shared Redis-backed limiter before multi-instance public deployment. MFA remains deferred and required before Production readiness.
 
+## Phase 7 verification
+
+- **The final Pilot verification suite passes.** Backend `pytest`: 44 passed; Python compilation: passed; TypeScript `tsc --noEmit`: passed; Next.js production compilation completed and generated Build ID `aSIGKyDH3YLmsNwWlNYRz`.
+- Live Phase 1 checks passed again for Owner, Admin, Accountant, Viewer, last-Owner protection, invitation email/expiry/one-time rules, and private Storage roles.
+- Live Action Center checks passed for unauthenticated `401`, fake `company_id` rejection, Viewer read-only, Accountant detection/write boundary, Admin assignment/approval, audit events, deduplication, idempotent non-execution, RAG policy citation, and conservative value metrics.
+- Browser verification passed in English and Arabic. The document language/direction switched between `en/ltr` and `ar/rtl`; a 390×844 viewport had no horizontal overflow; the protected Action URL redirected to login without a session.
+- Live response headers include CSP, `DENY` framing, `nosniff`, and strict-origin referrer policy. The authenticated Action UI was verified through API role/lifecycle tests and production compilation; the browser session intentionally did not expose or type credentials.
+
 ## Verification note
 
 The in-app browser completed the Expenses CRUD test and the Chat history restore/new-conversation test. Inventory and Invoices were verified through TypeScript, Next.js route compilation, HTTP 200 responses, and direct read-only API checks. Visual CRUD verification for those two sections remains desirable in the user's local browser.

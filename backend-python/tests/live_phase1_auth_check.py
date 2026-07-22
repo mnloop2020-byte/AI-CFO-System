@@ -24,7 +24,9 @@ from app.config.settings import (
 from app.schemas.customer_schema import CustomerCreate
 
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = __import__("os").environ.get(
+    "PHASE1_CHECK_API_URL", "http://127.0.0.1:8000"
+)
 
 
 def require_setting(name: str, value: str | None) -> str:
