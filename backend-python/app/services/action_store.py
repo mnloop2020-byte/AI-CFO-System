@@ -143,6 +143,29 @@ def update_financial_action(
     return _serialize_action(response.data[0])
 
 
+def refresh_financial_action_detection(
+    action_id: UUID,
+    payload: dict[str, Any],
+) -> FinancialActionResponse:
+    allowed_fields = {
+        "title_en",
+        "title_ar",
+        "description_en",
+        "description_ar",
+        "severity",
+        "financial_impact",
+        "currency",
+        "evidence",
+        "recommendation_en",
+        "recommendation_ar",
+        "due_date",
+    }
+    return update_financial_action(
+        action_id,
+        {key: value for key, value in payload.items() if key in allowed_fields},
+    )
+
+
 def assign_financial_action(
     action_id: UUID,
     assigned_to: UUID | None,

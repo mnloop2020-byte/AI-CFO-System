@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from fastapi.testclient import TestClient
+import httpx
 from supabase import create_client
 
 from app.config.settings import (
@@ -19,7 +19,6 @@ from app.config.settings import (
     SUPABASE_SERVICE_ROLE_KEY,
     SUPABASE_URL,
 )
-from app.main import app
 
 
 def main() -> None:
@@ -37,7 +36,10 @@ def main() -> None:
     if not auth.session:
         raise RuntimeError("Owner authentication failed.")
 
-    client = TestClient(app)
+    client = httpx.Client(
+        base_url=os.environ.get("ACTION_CHECK_API_URL", "http://127.0.0.1:8000"),
+        timeout=120,
+    )
     headers = {"Authorization": f"Bearer {auth.session.access_token}"}
 
     service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -122,7 +124,12 @@ def main() -> None:
     assert smuggled_company.status_code == 422
 
     approval_action = next(
-        (action for action in actions if action["requires_approval"]),
+        (
+            action
+            for action in actions
+            if action["requires_approval"]
+            and action["status"] in {"new", "waiting_for_approval"}
+        ),
         None,
     )
     if approval_action and approval_action["status"] == "new":
@@ -187,6 +194,19 @@ def main() -> None:
     assert detail.status_code == 200, detail.text
     assert detail.json()["events"]
 
+    expense_action = next(
+        action for action in actions if action["action_type"] == "expense_review"
+    )
+    expense_detail = client.get(
+        f"/actions/{expense_action['id']}", headers=headers
+    ).json()
+    assert "policy_match_available" in expense_detail["evidence"]
+    if expense_detail["evidence"]["policy_match_available"]:
+        policy_match = expense_detail["evidence"]["policy_match"]
+        assert policy_match["file_name"]
+        assert policy_match["chunk_number"] >= 1
+        assert "human comparison only" in policy_match["interpretation"]
+
     metrics = client.get("/actions/metrics", headers=headers)
     assert metrics.status_code == 200, metrics.text
     assert metrics.json()["open_actions"] >= 2
@@ -205,6 +225,9 @@ def main() -> None:
             "admin_can_assign_and_approve": True,
             "external_execution_disabled": True,
             "execution_idempotency": True,
+            "expense_policy_context_available": expense_detail["evidence"][
+                "policy_match_available"
+            ],
         }
     )
 

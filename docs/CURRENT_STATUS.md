@@ -104,6 +104,15 @@ The next implementation order is:
 - Live authorization tests passed: Viewer is read-only; Accountant can detect/update but cannot assign or approve; Admin can assign and approve. Fake `company_id` is rejected, unauthenticated access returns `401`, repeated detection creates no duplicate, execution retries replay idempotently, and no email, payment, or purchase is executed.
 - Current development data contains three traceable actions derived from the preserved invoice, low-stock item, and flagged expense. All 36 backend tests and Python compilation pass; TypeScript and the Next.js production build compile successfully.
 
+## Phase 4 progress
+
+- **The first three Action Center use cases are complete.** Overdue invoices include deterministic lateness/amount priority, a bilingual editable reminder draft, approval expiry, and a recorded follow-up that never sends email without an integration.
+- Active invoice follow-up can be paused back to human review when a dispute or payment plan is recorded. The reason is preserved in the audit timeline, and paid source invoices close through deterministic detection rather than an LLM claim.
+- Low-stock actions calculate only the quantity/cost available from inventory data and remain purchase-review drafts; no purchase order or external purchase can be created.
+- Flagged expenses explicitly state that the signal does not prove fraud. RAG policy retrieval is isolated as untrusted evidence for human comparison, and when a relevant policy exists the action records the document name, chunk number, excerpt, and similarity without treating document text as executable instructions.
+- Re-running detection refreshes traceable evidence only when it changed while the open-action unique key prevents duplicates. The live development check found policy context and verified its cited file/chunk metadata.
+- The full backend suite now reports 37 passing tests, including policy-source traceability; TypeScript passes.
+
 ## Verification note
 
 The in-app browser completed the Expenses CRUD test and the Chat history restore/new-conversation test. Inventory and Invoices were verified through TypeScript, Next.js route compilation, HTTP 200 responses, and direct read-only API checks. Visual CRUD verification for those two sections remains desirable in the user's local browser.

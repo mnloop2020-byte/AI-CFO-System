@@ -123,10 +123,12 @@ export function transitionFinancialAction(
   actionId: string,
   status: ActionStatus,
   dueDate?: string | null,
+  note?: string | null,
 ) {
   return api.post<FinancialAction>(`/actions/${actionId}/transition`, {
     status,
     due_date: dueDate,
+    note,
   });
 }
 

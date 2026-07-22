@@ -52,7 +52,22 @@ Status: **complete**. Company Settings, persisted private PDF reports, private f
 
 Status: **core complete**. The database, deterministic engine, RLS/permissions, audit lifecycle, idempotency, and bilingual interface are implemented. The three use-case refinements and value measurement continue in the next stage.
 
-## Phase 4: Security and quality hardening
+## Phase 4: Action Center use cases
+
+- Overdue-invoice reminder drafts, approval, non-sending follow-up recording, dispute/payment-plan pause, and paid-source closure.
+- Low-inventory replenishment review with deterministic quantities/cost limits and no purchasing.
+- Flagged-expense human review with optional cited RAG policy context and explicit non-fraud wording.
+
+Status: **complete**. Detection remains idempotent, evidence refreshes safely, and all external financial execution is disabled.
+
+## Phase 5: Value measurement
+
+- Action counts, linked value, follow-up evidence, decision acceptance, delay metrics, and transparent time-saved estimation.
+- Never attribute collections to AI without a verifiable event and payment timeline.
+
+Status: next.
+
+## Phase 6: Security and quality hardening
 
 - Audit logs, rate limiting, CAPTCHA where appropriate, upload defenses, and RAG prompt-injection mitigation.
 - Timeouts/retries for external services, structured logging, and safe error handling.
@@ -61,7 +76,13 @@ Status: **core complete**. The database, deterministic engine, RLS/permissions, 
 
 Status: pending.
 
-## Phase 5: Deployment
+## Phase 7: Final verification
+
+- Full backend, Auth/roles, RLS/Storage, action lifecycle, idempotency, upload, RAG security, financial-calculation, frontend, bilingual, responsive, and end-to-end checks.
+
+Status: pending.
+
+## Phase 8: Delivery and deployment readiness
 
 Deployment requires successful Auth, RLS, Storage policies, role tests, backup verification, PDF reports, RAG, Action Center, and final end-to-end tests.
 

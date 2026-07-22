@@ -114,3 +114,32 @@ def test_frontend_cannot_smuggle_company_id_into_action_update() -> None:
         FinancialActionUpdate.model_validate(
             {"title_en": "Changed", "company_id": "fake-company"}
         )
+
+
+def test_expense_policy_match_is_traceable_and_never_declares_fraud() -> None:
+    expense = _expense()
+    candidates = detect_action_candidates(
+        [],
+        [],
+        [expense],
+        [],
+        today=date(2026, 3, 5),
+        currency="USD",
+        expense_policy_matches={
+            expense.id: {
+                "document_id": "50000000-0000-0000-0000-000000000001",
+                "file_name": "expense-policy.txt",
+                "chunk_index": 2,
+                "content": "Receipts and manager approval are required.",
+                "similarity": 0.82,
+            }
+        },
+    )
+
+    evidence = candidates[0].payload["evidence"]
+    assert evidence["policy_match_available"] is True
+    assert evidence["policy_match"]["file_name"] == "expense-policy.txt"
+    assert evidence["policy_match"]["chunk_number"] == 3
+    assert evidence["policy_match"]["similarity"] == 0.82
+    assert evidence["fraud_confirmed"] is False
+    assert "human comparison only" in evidence["policy_match"]["interpretation"]

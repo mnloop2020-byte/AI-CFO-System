@@ -9,10 +9,12 @@ from app.schemas.customer_schema import CustomerResponse
 from app.schemas.expenses_schema import ExpenseResponse
 from app.schemas.inventory_schema import InventoryResponse
 from app.schemas.invoices_schema import InvoiceResponse
+from app.rag.search import search_documents
 from app.services.action_store import (
     create_financial_action,
     find_open_action,
     list_open_actions,
+    refresh_financial_action_detection,
     transition_financial_action,
 )
 from app.services.company_store import get_company_settings
@@ -58,6 +60,7 @@ def detect_action_candidates(
     *,
     today: date,
     currency: str | None,
+    expense_policy_matches: dict[str, dict[str, Any]] | None = None,
 ) -> list[ActionCandidate]:
     candidates: list[ActionCandidate] = []
     customer_map = {customer.id: customer for customer in customers}
@@ -186,6 +189,22 @@ def detect_action_candidates(
     for expense in expenses:
         if not expense.is_flagged:
             continue
+        policy_match = (expense_policy_matches or {}).get(expense.id)
+        policy_evidence = (
+            {
+                "document_id": policy_match.get("document_id"),
+                "file_name": policy_match.get("file_name") or "Unknown document",
+                "chunk_number": int(policy_match.get("chunk_index") or 0) + 1,
+                "excerpt": str(policy_match.get("content") or "")[:500],
+                "similarity": float(policy_match.get("similarity") or 0),
+                "interpretation": (
+                    "Policy context is provided for human comparison only; "
+                    "it does not establish a violation or fraud."
+                ),
+            }
+            if policy_match
+            else None
+        )
         candidates.append(
             ActionCandidate(
                 dedup_key=f"expense_review:{expense.id}",
@@ -215,6 +234,8 @@ def detect_action_candidates(
                         "is_flagged": True,
                         "flag_reason_available": False,
                         "fraud_confirmed": False,
+                        "policy_match": policy_evidence,
+                        "policy_match_available": policy_evidence is not None,
                         "source": {"table": "expenses", "id": expense.id},
                     },
                     "recommendation_en": (
@@ -233,6 +254,30 @@ def detect_action_candidates(
         )
 
     return candidates
+
+
+def _load_expense_policy_matches(
+    expenses: list[ExpenseResponse],
+) -> dict[str, dict[str, Any]]:
+    """Retrieve policy context as untrusted evidence, never executable instructions."""
+
+    matches: dict[str, dict[str, Any]] = {}
+    for expense in expenses:
+        if not expense.is_flagged:
+            continue
+        query_parts = [
+            "company expense policy approval receipt vendor business purpose",
+            expense.category,
+            expense.vendor or "",
+            expense.description or "",
+        ]
+        try:
+            candidates = search_documents(" ".join(query_parts), match_count=3)
+        except Exception:
+            candidates = []
+        if candidates:
+            matches[expense.id] = candidates[0]
+    return matches
 
 
 def _source_is_resolved(action: Any, source_map: dict[str, dict[str, Any]]) -> bool:
@@ -262,6 +307,7 @@ def run_action_detection(today: date | None = None) -> DetectionResult:
         customers,
         today=today,
         currency=company.currency,
+        expense_policy_matches=_load_expense_policy_matches(expenses),
     )
 
     created_ids = []
@@ -269,6 +315,38 @@ def run_action_detection(today: date | None = None) -> DetectionResult:
     for candidate in candidates:
         current = find_open_action(candidate.dedup_key)
         if current:
+            refreshed_fields = {
+                "title_en": candidate.payload["title_en"],
+                "title_ar": candidate.payload["title_ar"],
+                "description_en": candidate.payload["description_en"],
+                "description_ar": candidate.payload["description_ar"],
+                "severity": candidate.payload["severity"],
+                "financial_impact": candidate.payload["financial_impact"],
+                "currency": candidate.payload["currency"],
+                "evidence": candidate.payload["evidence"],
+                "recommendation_en": candidate.payload["recommendation_en"],
+                "recommendation_ar": candidate.payload["recommendation_ar"],
+                "due_date": candidate.payload.get("due_date"),
+            }
+            current_fields = {
+                "title_en": current.title_en,
+                "title_ar": current.title_ar,
+                "description_en": current.description_en,
+                "description_ar": current.description_ar,
+                "severity": current.severity,
+                "financial_impact": (
+                    float(current.financial_impact)
+                    if current.financial_impact is not None
+                    else None
+                ),
+                "currency": current.currency,
+                "evidence": current.evidence,
+                "recommendation_en": current.recommendation_en,
+                "recommendation_ar": current.recommendation_ar,
+                "due_date": current.due_date.isoformat() if current.due_date else None,
+            }
+            if current_fields != refreshed_fields:
+                refresh_financial_action_detection(current.id, refreshed_fields)
             existing += 1
             continue
         try:
