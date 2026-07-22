@@ -7,6 +7,13 @@ from app.config.settings import CHAT_MAX_MESSAGE_CHARS
 from app.schemas.rag_schema import DocumentSource
 
 
+ChatSourceMode = Literal[
+    "live_financial_data",
+    "uploaded_documents",
+    "general",
+]
+
+
 class ChatMessage(BaseModel):
     id: str | None = None
     role: Literal["user", "assistant"]
@@ -23,6 +30,7 @@ class ChatResponse(BaseModel):
     response_version: Literal["1"] = "1"
     reply: str
     conversation_id: str
+    source_mode: ChatSourceMode
     sources: list[DocumentSource] = Field(default_factory=list)
 
 

@@ -30,13 +30,14 @@ def chat(
     _: RequestContext = Depends(require_permission("chat.use")),
 ) -> ChatResponse:
     try:
-        reply, conversation_id, sources = handle_chat(
+        reply, conversation_id, sources, source_mode = handle_chat(
             message=request.message,
             conversation_id=request.conversation_id,
         )
         return ChatResponse(
             reply=reply,
             conversation_id=conversation_id,
+            source_mode=source_mode,
             sources=sources,
         )
     except Exception as error:

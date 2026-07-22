@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.agents import report_writer_agent
+from app.agents import orchestrator
 
 
 PROMPTS = (
@@ -17,6 +18,7 @@ INTERNAL_MARKERS = (
     '"agents"',
     '"results"',
     '"data_sources"',
+    "cashflow_report.txt",
 )
 VERIFIED_REPORT = {
     "sales": {
@@ -66,9 +68,12 @@ VERIFIED_REPORT = {
 def main() -> None:
     report_writer_agent.get_cfo_report_data = lambda: VERIFIED_REPORT
     report_writer_agent.enrich_financial_data = lambda metrics: metrics
+    orchestrator.get_context = lambda _: (_ for _ in ()).throw(
+        AssertionError("RAG must not run for a comprehensive financial summary.")
+    )
 
     for language, prompt in PROMPTS:
-        reply = report_writer_agent.run_report_writer_agent(prompt)
+        reply, sources, source_mode = orchestrator.run_orchestrator(prompt)
         nonempty = bool(reply.strip())
         markdown = any(token in reply for token in ("##", "|"))
         internal_json = any(marker in reply for marker in INTERNAL_MARKERS)
@@ -77,7 +82,12 @@ def main() -> None:
             f"internal_json={internal_json} length={len(reply)}"
         )
 
-        if not nonempty or internal_json:
+        if (
+            not nonempty
+            or internal_json
+            or sources
+            or source_mode != "live_financial_data"
+        ):
             raise SystemExit(1)
 
 

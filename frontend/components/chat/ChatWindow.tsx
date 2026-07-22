@@ -25,7 +25,10 @@ import remarkGfm from "remark-gfm";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import ConversationHistory from "@/components/chat/ConversationHistory";
-import { getSafeAssistantContent } from "@/lib/chat-contract";
+import {
+  getSafeAssistantContent,
+  type ChatSourceMode,
+} from "@/lib/chat-contract";
 import {
   deleteConversation,
   getConversationMessages,
@@ -39,6 +42,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   conversationId?: string;
+  sourceMode?: ChatSourceMode;
 };
 
 const CONVERSATION_STORAGE_KEY =
@@ -67,6 +71,52 @@ function createInitialMessages(
       content: welcomeMessage,
     },
   ];
+}
+
+function getSourceModeLabel(
+  sourceMode: ChatSourceMode | undefined,
+  language: "ar" | "en",
+) {
+  if (sourceMode === "live_financial_data") {
+    return language === "ar"
+      ? "بيانات مالية حالية"
+      : "Current financial data";
+  }
+  if (sourceMode === "uploaded_documents") {
+    return language === "ar"
+      ? "مستندات مرفوعة"
+      : "Uploaded documents";
+  }
+  if (sourceMode === "general") {
+    return language === "ar"
+      ? "إرشاد عام"
+      : "General guidance";
+  }
+  return language === "ar" ? "رد محفوظ" : "Stored response";
+}
+
+function getSourceModeDescription(
+  sourceMode: ChatSourceMode | undefined,
+  language: "ar" | "en",
+) {
+  if (sourceMode === "live_financial_data") {
+    return language === "ar"
+      ? "تم إنشاء الإجابة باستخدام السجلات المالية الحالية المتاحة."
+      : "Generated using the available current financial records.";
+  }
+  if (sourceMode === "uploaded_documents") {
+    return language === "ar"
+      ? "تم إنشاء الإجابة من مستندات مرفوعة، وليست من السجلات المالية الحالية."
+      : "Generated from uploaded documents, not current financial records.";
+  }
+  if (sourceMode === "general") {
+    return language === "ar"
+      ? "إرشاد عام لم يستخدم سجلات الشركة أو المستندات المرفوعة."
+      : "General guidance that did not use company records or uploaded documents.";
+  }
+  return language === "ar"
+    ? "رد من محادثة سابقة لم يُسجل معها نوع المصدر."
+    : "Stored response from before source-mode tracking was available.";
 }
 
 function MarkdownContent({
@@ -414,6 +464,7 @@ export default function ChatWindow() {
         content: response.reply,
         conversationId:
           response.conversation_id,
+        sourceMode: response.source_mode,
       };
 
       setMessages((currentMessages) => [
@@ -654,8 +705,9 @@ export default function ChatWindow() {
 
                     <span className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary">
                       {chatMessage.conversationId
-                        ? t(
-                            "chatLiveAgentResponse",
+                        ? getSourceModeLabel(
+                            chatMessage.sourceMode,
+                            language,
                           )
                         : t("chatAssistant")}
                     </span>
@@ -673,9 +725,10 @@ export default function ChatWindow() {
                         <div className="flex items-center gap-2">
                           <Database size={14} />
 
-                          {language === "ar"
-                            ? "تم الإنشاء باستخدام السجلات المالية المتاحة"
-                            : "Generated using available financial records"}
+                          {getSourceModeDescription(
+                            chatMessage.sourceMode,
+                            language,
+                          )}
                         </div>
 
                         <span
@@ -698,9 +751,10 @@ export default function ChatWindow() {
 
                 {chatMessage.conversationId ? (
                   <p className="mt-2 px-1 text-xs text-text-secondary">
-                    {language === "ar"
-                      ? "تم إنشاء الإجابة من باك إند المدير المالي الذكي والسجلات المالية المتاحة."
-                      : "Generated from the AI CFO backend and available financial records."}
+                    {getSourceModeDescription(
+                      chatMessage.sourceMode,
+                      language,
+                    )}
                   </p>
                 ) : null}
               </div>

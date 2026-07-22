@@ -10,8 +10,9 @@ import {
 const BASE_RESPONSE = {
   response_version: CHAT_RESPONSE_VERSION,
   conversation_id: "conversation-1",
+  source_mode: "live_financial_data",
   sources: [],
-};
+} as const;
 
 test("keeps a single-agent Markdown reply", () => {
   const response = parseChatResponse(
@@ -54,6 +55,7 @@ test("keeps a readable Arabic Markdown report", () => {
   );
 
   assert.match(response.reply, /^## الملخص المالي/u);
+  assert.equal(response.source_mode, "live_financial_data");
 });
 
 test("keeps a readable English Markdown report", () => {
@@ -112,5 +114,20 @@ test("rejects an incompatible response contract without serializing it", () => {
         "ar",
       ),
     /استجابة محادثة غير متوافقة/u,
+  );
+});
+
+test("requires an explicit and supported source mode", () => {
+  assert.throws(
+    () =>
+      parseChatResponse(
+        {
+          ...BASE_RESPONSE,
+          source_mode: "mixed_unknown_source",
+          reply: "Summary",
+        },
+        "en",
+      ),
+    /incompatible chat response/u,
   );
 });

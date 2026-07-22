@@ -10,10 +10,16 @@ export type DocumentSource = {
   similarity: number | null;
 };
 
+export type ChatSourceMode =
+  | "live_financial_data"
+  | "uploaded_documents"
+  | "general";
+
 export type ChatResponse = {
   response_version: typeof CHAT_RESPONSE_VERSION;
   reply: string;
   conversation_id: string;
+  source_mode: ChatSourceMode;
   sources: DocumentSource[];
 };
 
@@ -108,6 +114,14 @@ function isDocumentSource(value: unknown): value is DocumentSource {
   );
 }
 
+function isChatSourceMode(value: unknown): value is ChatSourceMode {
+  return (
+    value === "live_financial_data" ||
+    value === "uploaded_documents" ||
+    value === "general"
+  );
+}
+
 export function parseChatResponse(
   payload: unknown,
   language: ChatLanguage,
@@ -116,7 +130,8 @@ export function parseChatResponse(
     !isRecord(payload) ||
     payload.response_version !== CHAT_RESPONSE_VERSION ||
     typeof payload.conversation_id !== "string" ||
-    !payload.conversation_id.trim()
+    !payload.conversation_id.trim() ||
+    !isChatSourceMode(payload.source_mode)
   ) {
     throw new Error(
       language === "ar"
@@ -129,6 +144,7 @@ export function parseChatResponse(
     response_version: CHAT_RESPONSE_VERSION,
     reply: getSafeAssistantContent(payload.reply, language),
     conversation_id: payload.conversation_id,
+    source_mode: payload.source_mode,
     sources: Array.isArray(payload.sources)
       ? payload.sources.filter(isDocumentSource)
       : [],
