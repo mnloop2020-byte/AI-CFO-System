@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import FinancialAttachments from "@/components/crm/FinancialAttachments";
 import type {
   CreateExpenseInput,
   Expense,
@@ -20,6 +21,7 @@ type ExpenseFormProps = {
   onCancel: () => void;
   onSave: (
     expense: CreateExpenseInput,
+    attachment?: File,
   ) => Promise<void> | void;
   initialExpense?: Expense | null;
   saving?: boolean;
@@ -84,6 +86,9 @@ export default function ExpenseForm({
       initialExpense?.description ?? "",
     );
 
+  const [selectedFile, setSelectedFile] =
+    useState<File | null>(null);
+
   const [
     validationError,
     setValidationError,
@@ -137,7 +142,7 @@ export default function ExpenseForm({
         ? `${expenseDate}T00:00:00.000Z`
         : null,
       is_flagged: isFlagged,
-    });
+    }, selectedFile ?? undefined);
   }
 
   return (
@@ -370,15 +375,20 @@ export default function ExpenseForm({
           type="file"
           accept=".pdf,.png,.jpg,.jpeg"
           disabled={saving}
+          onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
           className="block w-full rounded-xl border border-dashed border-border bg-surface-soft px-4 py-4 text-sm text-text-secondary file:me-4 file:rounded-lg file:border-0 file:bg-primary-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary"
         />
 
         <span className="block text-xs leading-5 text-text-secondary">
           {isArabic
-            ? "رفع الملفات غير متصل حاليًا. ستُحفظ بيانات المصروف، لكن المستند المحدد لن يتم رفعه."
-            : "File upload is not connected yet. The expense data will be stored, but the selected document will not be uploaded."}
+            ? "سيُفحص الملف ثم يُرفع إلى مساحة تخزين خاصة بعد حفظ المصروف. الحد الأقصى 5 ميجابايت."
+            : "The file will be validated and uploaded to private storage after the expense is saved. Maximum 5 MB."}
         </span>
       </label>
+
+      {initialExpense ? (
+        <FinancialAttachments recordType="expense" recordId={initialExpense.id} />
+      ) : null}
 
       {validationError ? (
         <div
@@ -400,8 +410,8 @@ export default function ExpenseForm({
 
       <div className="rounded-xl border border-amber-100 bg-warning-soft px-4 py-3 text-sm leading-6 text-text-secondary">
         {isArabic
-          ? "ستُحفظ بيانات المصروف في FastAPI وSupabase. سيتم ربط تخزين المستندات الداعمة لاحقًا."
-          : "The expense will be stored in FastAPI and Supabase. Supporting-document storage will be connected later."}
+          ? "ستُحفظ بيانات المصروف والمرفق الخاص في FastAPI وSupabase. حذف المرفق لا يحذف سجل المصروف."
+          : "The expense and its private attachment are stored through FastAPI and Supabase. Deleting the file does not delete the expense record."}
       </div>
 
       <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">

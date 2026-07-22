@@ -21,6 +21,7 @@ import {
 import InvoiceForm from "@/components/crm/InvoiceForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import Modal from "@/components/ui/Modal";
+import { uploadAttachment } from "@/lib/attachments";
 import {
   getCustomers,
   type Customer,
@@ -305,12 +306,15 @@ export default function InvoicesTable() {
 
   async function handleSaveInvoice(
     invoiceInput: CreateInvoiceInput,
+    attachment?: File,
   ) {
     setSaving(true);
     setSaveError(null);
     setActionError(null);
 
     try {
+      let savedInvoice: Invoice;
+
       if (editingInvoice) {
         const updatedInvoice =
           await updateInvoice(
@@ -328,6 +332,8 @@ export default function InvoicesTable() {
           ),
         );
 
+        savedInvoice = updatedInvoice;
+
         setSuccessMessage(
           isArabic
             ? "تم تحديث الفاتورة بنجاح."
@@ -342,11 +348,27 @@ export default function InvoicesTable() {
           ...currentInvoices,
         ]);
 
+        savedInvoice = createdInvoice;
+
         setSuccessMessage(
           isArabic
             ? "تم إنشاء الفاتورة بنجاح."
             : "Invoice created successfully.",
         );
+      }
+
+      if (attachment) {
+        try {
+          await uploadAttachment("invoice", savedInvoice.id, attachment);
+        } catch (uploadError) {
+          setActionError(
+            uploadError instanceof Error
+              ? uploadError.message
+              : isArabic
+                ? "تم حفظ الفاتورة، لكن تعذر رفع المرفق."
+                : "The invoice was saved, but its attachment could not be uploaded.",
+          );
+        }
       }
 
       setModalOpen(false);

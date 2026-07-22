@@ -21,6 +21,7 @@ import {
 import ExpenseForm from "@/components/crm/ExpenseForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import Modal from "@/components/ui/Modal";
+import { uploadAttachment } from "@/lib/attachments";
 import {
   createExpense,
   deleteExpense,
@@ -226,12 +227,15 @@ export default function ExpensesTable() {
 
   async function handleSaveExpense(
     expenseInput: CreateExpenseInput,
+    attachment?: File,
   ) {
     setSaving(true);
     setSaveError(null);
     setActionError(null);
 
     try {
+      let savedExpense: Expense;
+
       if (editingExpense) {
         const updatedExpense =
           await updateExpense(
@@ -249,6 +253,8 @@ export default function ExpensesTable() {
           ),
         );
 
+        savedExpense = updatedExpense;
+
         setSuccessMessage(
           isArabic
             ? "تم تحديث سجل المصروف بنجاح."
@@ -263,11 +269,27 @@ export default function ExpensesTable() {
           ...currentExpenses,
         ]);
 
+        savedExpense = createdExpense;
+
         setSuccessMessage(
           isArabic
             ? "تم إنشاء سجل المصروف بنجاح."
             : "Expense record created successfully.",
         );
+      }
+
+      if (attachment) {
+        try {
+          await uploadAttachment("expense", savedExpense.id, attachment);
+        } catch (uploadError) {
+          setActionError(
+            uploadError instanceof Error
+              ? uploadError.message
+              : isArabic
+                ? "تم حفظ المصروف، لكن تعذر رفع المرفق."
+                : "The expense was saved, but its attachment could not be uploaded.",
+          );
+        }
       }
 
       setModalOpen(false);

@@ -36,11 +36,11 @@ Execute and test each item in this order:
 1. **Complete:** Connect Settings to the real single company through FastAPI and RLS.
 2. **Complete:** Persist generated PDF reports in the private `reports` bucket and `reports` table.
 3. **Complete:** Display real report history and provide short-lived signed/protected downloads.
-4. Store invoice and expense attachments in private Storage.
+4. **Complete:** Store invoice and expense attachments in private Storage.
 5. Refresh Dashboard and page KPIs immediately after CRUD without manual refresh.
 6. Improve CEO Agent grounding so figures and conclusions come only from verified data, with clear sources where appropriate.
 
-Status: **in progress**. Company Settings and report persistence/history/downloads are complete; private invoice and expense attachments are next.
+Status: **in progress**. Company Settings, reports, and private financial attachments are complete; immediate KPI refresh is next.
 
 ## Phase 3: AI Financial Action Center
 

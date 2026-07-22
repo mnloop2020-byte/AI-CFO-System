@@ -70,10 +70,9 @@ Phase 1 — Single Company Authentication — is complete. Phase 2 is in progres
 
 The remaining Phase 2 order is:
 
-1. Connect invoice and expense attachments to private Storage.
-2. Refresh Dashboard KPIs immediately after CRUD operations.
-3. Harden CEO Agent claims and source attribution.
-4. Begin AI Financial Action Center only after the preceding Phase 2 work is stable.
+1. Refresh Dashboard KPIs immediately after CRUD operations.
+2. Harden CEO Agent claims and source attribution.
+3. Begin AI Financial Action Center only after the preceding Phase 2 work is stable.
 
 ## Phase 2 progress
 
@@ -85,6 +84,10 @@ The remaining Phase 2 order is:
 - **2.2 PDF report persistence is complete.** A live Sales Performance report was generated from the preserved backend data, rendered as a valid PDF, stored as metadata in `public.reports`, and uploaded beneath the trusted company folder in the private `reports` bucket.
 - Real report history returned the stored row, a five-minute signed download URL returned the original PDF, and the downloaded bytes passed the `%PDF-` signature check. Viewer read/download succeeded, Viewer generation was denied with `403`, and unauthenticated history was denied with `401`.
 - Automated English and multi-page Arabic PDF tests pass. The UI no longer claims that report storage is disconnected.
+- **2.3 Invoice and expense attachments is complete.** Migration `20260721123000_add_financial_attachments.sql` created a company-scoped RLS table and a private 5 MB `financial-attachments` bucket for PDF, PNG, and JPEG files.
+- FastAPI verifies file size, declared MIME, extension, and actual PDF/image signature before upload. Storage paths contain the trusted company, record type, record ID, and an opaque attachment ID; the frontend never supplies `company_id`.
+- The invoice and expense forms now upload new files after the financial record is saved. Existing records expose bilingual list, upload, signed download, and explicit attachment-only deletion controls.
+- Live tests passed for invoice PDF and expense PNG upload/list/download/delete, fake-PDF rejection `400`, Viewer upload denial `403`, Viewer read access `200`, and preservation of Invoice `1` and Expenses `3`. Only the two temporary attachment objects created by the test were removed.
 
 ## Verification note
 

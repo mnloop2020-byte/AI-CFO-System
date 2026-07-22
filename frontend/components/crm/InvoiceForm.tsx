@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import FinancialAttachments from "@/components/crm/FinancialAttachments";
 import { type Customer } from "@/lib/customers";
 import {
   type CreateInvoiceInput,
@@ -23,6 +24,7 @@ type InvoiceFormProps = {
   onCancel: () => void;
   onSave: (
     invoice: CreateInvoiceInput,
+    attachment?: File,
   ) => Promise<void> | void;
   customers?: Customer[];
   initialInvoice?: Invoice | null;
@@ -138,8 +140,8 @@ export default function InvoiceForm({
       "unpaid",
   );
 
-  const [selectedFileName, setSelectedFileName] =
-    useState("");
+  const [selectedFile, setSelectedFile] =
+    useState<File | null>(null);
 
   const [validationError, setValidationError] =
     useState<string | null>(null);
@@ -235,9 +237,8 @@ export default function InvoiceForm({
             `${dueDate}T00:00:00.000Z`,
           ).toISOString()
         : null,
-      file_url:
-        initialInvoice?.file_url ?? null,
-    });
+      file_url: initialInvoice?.file_url ?? null,
+    }, selectedFile ?? undefined);
   }
 
   return (
@@ -469,7 +470,7 @@ export default function InvoiceForm({
 
           <span className="min-w-0">
             <span className="block text-sm font-medium text-text-primary">
-              {selectedFileName ||
+              {selectedFile?.name ||
                 (isArabic
                   ? "اختر مستند الفاتورة"
                   : "Choose invoice document")}
@@ -488,9 +489,7 @@ export default function InvoiceForm({
               const file =
                 event.target.files?.[0];
 
-              setSelectedFileName(
-                file?.name ?? "",
-              );
+              setSelectedFile(file ?? null);
             }}
             className="sr-only"
           />
@@ -498,10 +497,14 @@ export default function InvoiceForm({
 
         <p className="text-xs leading-5 text-text-secondary">
           {isArabic
-            ? "لن يُرفع المستند المحدد حاليًا. سيتم ربط Supabase Storage في خطوة لاحقة."
-            : "The selected document is not uploaded yet. Supabase Storage will be connected in a later step."}
+            ? "سيُفحص الملف ثم يُرفع إلى مساحة تخزين خاصة بعد حفظ الفاتورة. الحد الأقصى 5 ميجابايت."
+            : "The file will be validated and uploaded to private storage after the invoice is saved. Maximum 5 MB."}
         </p>
       </div>
+
+      {initialInvoice ? (
+        <FinancialAttachments recordType="invoice" recordId={initialInvoice.id} />
+      ) : null}
 
       <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-warning-soft px-4 py-3">
         <ReceiptText

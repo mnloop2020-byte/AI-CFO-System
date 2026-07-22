@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.auth import router as auth_router
+from app.routes.attachments import router as attachments_router
 from app.routes.chat import router as chat_router
 from app.routes.company import router as company_router
 from app.routes.customers import router as customers_router
@@ -49,6 +50,7 @@ app.include_router(auth_router)
 protected_dependencies = [Depends(require_authenticated_request)]
 
 app.include_router(company_router, dependencies=protected_dependencies)
+app.include_router(attachments_router, dependencies=protected_dependencies)
 app.include_router(chat_router, dependencies=protected_dependencies)
 app.include_router(rag_router, dependencies=protected_dependencies)
 app.include_router(reports_router, dependencies=protected_dependencies)
