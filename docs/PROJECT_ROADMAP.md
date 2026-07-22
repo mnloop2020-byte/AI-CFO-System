@@ -86,7 +86,7 @@ Status: **complete for Pilot**. Automated backend/financial/RAG/upload/security 
 
 Deployment requires successful Auth, RLS, Storage policies, role tests, backup verification, PDF reports, RAG, Action Center, and final end-to-end tests.
 
-Status: pending.
+Status: **documentation complete; deployment intentionally stopped**. The system is suitable for a controlled development Pilot with synthetic/non-sensitive data. Production remains blocked by MFA, distributed rate limiting, target-domain hardening, a real backup/restore rehearsal, centralized monitoring, and external compliance/security review.
 
 ## Project safeguards
 

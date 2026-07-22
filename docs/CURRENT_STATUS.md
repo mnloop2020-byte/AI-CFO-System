@@ -140,6 +140,13 @@ The next implementation order is:
 - Browser verification passed in English and Arabic. The document language/direction switched between `en/ltr` and `ar/rtl`; a 390×844 viewport had no horizontal overflow; the protected Action URL redirected to login without a session.
 - Live response headers include CSP, `DENY` framing, `nosniff`, and strict-origin referrer policy. The authenticated Action UI was verified through API role/lifecycle tests and production compilation; the browser session intentionally did not expose or type credentials.
 
+## Phase 8 delivery
+
+- Operations, environment, company/Owner bootstrap, invitation, role, report, attachment, RAG, Action Center, verification, and limitation guidance is consolidated in `docs/OPERATIONS_GUIDE.md`.
+- `docs/PRODUCTION_READINESS.md` records a controlled development-Pilot verdict, completed controls, explicit Production blockers, required external services/secrets, and the human deployment gate.
+- No Production deployment, email, payment, purchase, data deletion, or destructive restore was performed.
+- The user's local `backend-python/app/agents/accounting_agent.py` modification remains present and was not staged or changed by this work.
+
 ## Verification note
 
 The in-app browser completed the Expenses CRUD test and the Chat history restore/new-conversation test. Inventory and Invoices were verified through TypeScript, Next.js route compilation, HTTP 200 responses, and direct read-only API checks. Visual CRUD verification for those two sections remains desirable in the user's local browser.
