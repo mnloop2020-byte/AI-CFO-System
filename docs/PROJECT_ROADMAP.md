@@ -65,7 +65,7 @@ Status: **complete**. Detection remains idempotent, evidence refreshes safely, a
 - Action counts, linked value, follow-up evidence, decision acceptance, delay metrics, and transparent time-saved estimation.
 - Never attribute collections to AI without a verifiable event and payment timeline.
 
-Status: next.
+Status: **complete with conservative attribution**. All evidence-backed metrics are exposed. Collection attribution remains intentionally unavailable until payment timestamps and transaction references exist.
 
 ## Phase 6: Security and quality hardening
 

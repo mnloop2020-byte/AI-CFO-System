@@ -240,7 +240,11 @@ export default function FinancialActionCenter() {
   const metricCards = [
     { label: isArabic ? "الإجراءات المفتوحة" : "Open actions", value: metrics?.open_actions ?? 0 },
     { label: isArabic ? "الإجراءات المكتملة" : "Completed", value: metrics?.completed_actions ?? 0 },
+    { label: isArabic ? "القيمة المرتبطة المفتوحة" : "Open linked value", value: `${metrics?.open_financial_value ?? "0"} ${actions.find((action) => action.currency)?.currency ?? ""}`.trim() },
+    { label: isArabic ? "فواتير بدأت متابعتها" : "Invoices followed up", value: metrics?.followed_up_invoices ?? 0 },
+    { label: isArabic ? "متوسط أيام التأخير" : "Average overdue days", value: metrics?.average_days_overdue ?? (isArabic ? "غير متاح" : "Unavailable") },
     { label: isArabic ? "الموافقات" : "Approvals", value: metrics?.approvals ?? 0 },
+    { label: isArabic ? "نسبة قبول التوصيات" : "Recommendation acceptance", value: metrics?.accepted_recommendation_rate === null || metrics?.accepted_recommendation_rate === undefined ? (isArabic ? "غير متاح" : "Unavailable") : `${metrics.accepted_recommendation_rate}%` },
     { label: isArabic ? "التنبيهات المغلقة" : "Dismissed", value: metrics?.dismissed_actions ?? 0 },
   ];
 
@@ -252,6 +256,8 @@ export default function FinancialActionCenter() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((metric) => <div key={metric.label} className="rounded-2xl border border-border bg-surface p-5 shadow-sm"><p className="text-sm text-text-secondary">{metric.label}</p><p className="mt-2 text-3xl font-semibold text-text-primary">{metric.value}</p></div>)}
       </section>
+
+      {metrics ? <section className="rounded-2xl border border-border bg-surface px-5 py-4 text-sm leading-6 text-text-secondary"><p>{isArabic ? "لا يُنسب أي مبلغ محصّل إلى النظام حاليًا لأن الفواتير لا تحتوي وقت دفع ومرجع معاملة يمكن إثباتهما." : metrics.collection_attribution_note}</p><p className="mt-1">{isArabic ? `تقدير الوقت الموفّر: ${metrics.estimated_minutes_saved} دقيقة، بواقع خمس دقائق تقريبية لاكتشاف الإجراء وتجميع أدلته؛ وليس وقت عمل مقاسًا.` : `${metrics.estimation_method} Current estimate: ${metrics.estimated_minutes_saved} minutes.`}</p></section> : null}
 
       <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         <div className="flex flex-col gap-4 border-b border-border p-5 lg:flex-row lg:items-center lg:justify-between">

@@ -63,7 +63,12 @@ export type ActionMetrics = {
   open_actions: number;
   completed_actions: number;
   linked_financial_value: string;
+  open_financial_value: string;
   overdue_invoice_actions: number;
+  followed_up_invoices: number;
+  proven_collected_amount: string | null;
+  collection_attribution_note: string;
+  average_days_overdue: number | null;
   low_inventory_actions: number;
   expense_review_actions: number;
   approvals: number;

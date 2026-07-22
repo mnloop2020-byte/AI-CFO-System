@@ -209,7 +209,14 @@ def main() -> None:
 
     metrics = client.get("/actions/metrics", headers=headers)
     assert metrics.status_code == 200, metrics.text
-    assert metrics.json()["open_actions"] >= 2
+    metric_data = metrics.json()
+    assert metric_data["open_actions"] >= 2
+    assert metric_data["followed_up_invoices"] >= 0
+    assert metric_data["average_days_overdue"] is None or metric_data[
+        "average_days_overdue"
+    ] >= 0
+    assert metric_data["proven_collected_amount"] is None
+    assert "paid_at" in metric_data["collection_attribution_note"]
 
     print(
         {
@@ -228,6 +235,12 @@ def main() -> None:
             "expense_policy_context_available": expense_detail["evidence"][
                 "policy_match_available"
             ],
+            "value_metrics_without_false_collection_attribution": True,
+            "action_statuses": {
+                action["action_type"]: action["status"] for action in actions
+            },
+            "followed_up_invoices": metric_data["followed_up_invoices"],
+            "average_days_overdue": metric_data["average_days_overdue"],
         }
     )
 

@@ -113,6 +113,13 @@ The next implementation order is:
 - Re-running detection refreshes traceable evidence only when it changed while the open-action unique key prevents duplicates. The live development check found policy context and verified its cited file/chunk metadata.
 - The full backend suite now reports 37 passing tests, including policy-source traceability; TypeScript passes.
 
+## Phase 5 progress
+
+- **Action Center value measurement is complete with conservative attribution.** The API/UI report open and completed actions, total/open linked financial value, invoice follow-ups, average overdue days when available, approvals, rejections, recommendation acceptance, dismissed alerts, and an explicit time-saved estimate.
+- The time estimate is documented as five approximate minutes for signal identification/evidence assembly per detected action and is never presented as measured labor time.
+- `proven_collected_amount` deliberately remains unavailable until invoices contain both a verifiable `paid_at` timestamp and a payment transaction reference. The system therefore does not attribute the current invoice value or any collection to AI.
+- The live metrics check passed with the current evidence state (no provable followed-up invoice or average delay at that moment), and the API returned the explicit non-attribution explanation. The backend suite reports 38 passing tests; TypeScript and the production build compile successfully.
+
 ## Verification note
 
 The in-app browser completed the Expenses CRUD test and the Chat history restore/new-conversation test. Inventory and Invoices were verified through TypeScript, Next.js route compilation, HTTP 200 responses, and direct read-only API checks. Visual CRUD verification for those two sections remains desirable in the user's local browser.

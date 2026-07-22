@@ -21,6 +21,7 @@ from app.schemas.action_schema import (
 from app.security.authentication import require_permission
 from app.security.request_context import RequestContext
 from app.services.action_engine import run_action_detection
+from app.services.action_metrics import calculate_action_metrics
 from app.services.action_store import (
     assign_financial_action,
     get_financial_action,
@@ -60,41 +61,7 @@ def get_actions(
 def get_action_metrics(
     _: RequestContext = Depends(require_permission("actions.read")),
 ) -> ActionMetricsResponse:
-    actions = list_financial_actions()
-    completed = [action for action in actions if action.status == "completed"]
-    open_actions = [
-        action
-        for action in actions
-        if action.status not in {"completed", "dismissed", "rejected", "expired"}
-    ]
-    approvals = sum(1 for action in actions if action.approved_at is not None)
-    rejections = sum(1 for action in actions if action.status == "rejected")
-    decisions = approvals + rejections
-    return ActionMetricsResponse(
-        open_actions=len(open_actions),
-        completed_actions=len(completed),
-        linked_financial_value=sum(
-            (action.financial_impact or 0) for action in actions
-        ),
-        overdue_invoice_actions=sum(
-            1 for action in actions if action.action_type == "overdue_invoice"
-        ),
-        low_inventory_actions=sum(
-            1 for action in actions if action.action_type == "low_inventory"
-        ),
-        expense_review_actions=sum(
-            1 for action in actions if action.action_type == "expense_review"
-        ),
-        approvals=approvals,
-        rejections=rejections,
-        accepted_recommendation_rate=(approvals / decisions * 100 if decisions else None),
-        estimated_minutes_saved=len(actions) * 5,
-        estimation_method=(
-            "Estimate: five minutes of manual identification and evidence assembly "
-            "per detected action; this is not measured labor time."
-        ),
-        dismissed_actions=sum(1 for action in actions if action.status == "dismissed"),
-    )
+    return calculate_action_metrics(list_financial_actions())
 
 
 @router.post("/detect", response_model=DetectionResult)

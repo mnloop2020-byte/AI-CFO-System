@@ -128,7 +128,12 @@ class ActionMetricsResponse(BaseModel):
     open_actions: int
     completed_actions: int
     linked_financial_value: Decimal
+    open_financial_value: Decimal
     overdue_invoice_actions: int
+    followed_up_invoices: int
+    proven_collected_amount: Decimal | None
+    collection_attribution_note: str
+    average_days_overdue: float | None
     low_inventory_actions: int
     expense_review_actions: int
     approvals: int
