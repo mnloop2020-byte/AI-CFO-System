@@ -20,6 +20,12 @@ INTERNAL_MARKERS = (
     '"data_sources"',
     "cashflow_report.txt",
 )
+FALLBACK_MARKERS = (
+    "The narrative could not be approved",
+    "تعذر اعتماد الصياغة التفسيرية",
+    "| Metric | Value |",
+    "| البيان | القيمة |",
+)
 VERIFIED_REPORT = {
     "sales": {
         "completed_revenue": 200.0,
@@ -77,14 +83,18 @@ def main() -> None:
         nonempty = bool(reply.strip())
         markdown = any(token in reply for token in ("##", "|"))
         internal_json = any(marker in reply for marker in INTERNAL_MARKERS)
+        validation_fallback = any(marker in reply for marker in FALLBACK_MARKERS)
         print(
             f"{language}: nonempty={nonempty} markdown={markdown} "
-            f"internal_json={internal_json} length={len(reply)}"
+            f"internal_json={internal_json} "
+            f"validation_fallback={validation_fallback} length={len(reply)}"
         )
 
         if (
             not nonempty
+            or not markdown
             or internal_json
+            or validation_fallback
             or sources
             or source_mode != "live_financial_data"
         ):

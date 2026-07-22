@@ -1,6 +1,8 @@
 from app.ai.financial_grounding import (
+    find_unsupported_claims,
     find_unsupported_numbers,
     ground_financial_reply,
+    validate_financial_reply,
 )
 from app.schemas.expenses_schema import ExpenseResponse
 from app.schemas.invoices_schema import InvoiceResponse
@@ -28,6 +30,47 @@ VERIFIED_DATA = {
             "record_ids": ["sale-1"],
             "calculation": "completed revenue from completed sales",
         }
+    ],
+}
+
+COMPREHENSIVE_DATA = {
+    "sales": {
+        "completed_revenue": 200.0,
+        "completed_sales_count": 1,
+        "total_units_sold": 2,
+    },
+    "inventory": {
+        "overview": {"count": 1},
+        "low_inventory": {"count": 1},
+        "valuation": {"total_cost_value": 30.0},
+    },
+    "accounting": {
+        "total_expenses": 550.0,
+        "preliminary_operating_result": -350.0,
+    },
+    "cash_flow": {
+        "tracked_cash_inflows": 0.0,
+        "recorded_cash_outflows": 550.0,
+        "net_tracked_cash_flow": -550.0,
+        "expected_unpaid_inflows": 1000.0,
+    },
+    "tax": {"total_invoiced_vat": 150.0},
+    "fraud_risk": {"flagged_expenses_count": 1},
+    "company_context": {
+        "currency": None,
+        "bank_balance_available": False,
+    },
+    "data_sources": [
+        {
+            "table": "sales",
+            "record_ids": ["sale-1"],
+            "calculation": "completed revenue from completed sales",
+        },
+        {
+            "table": "expenses",
+            "record_ids": ["expense-1"],
+            "calculation": "sum of recorded expenses",
+        },
     ],
 }
 
@@ -68,6 +111,24 @@ def test_unavailable_bank_balance_claim_is_rejected() -> None:
         "How is cash?",
     )
     assert "narrative was withheld" in result
+
+
+def test_validation_exposes_stable_repair_reasons() -> None:
+    validation = validate_financial_reply(
+        "The bank balance is $999999.",
+        VERIFIED_DATA,
+    )
+
+    assert validation.is_valid is False
+    assert validation.unsupported_numbers == ("999999",)
+    assert set(validation.unsupported_claims) == {
+        "unconfigured_currency",
+        "bank_balance_claim",
+    }
+    assert find_unsupported_claims(
+        "Bank balance is unavailable.",
+        VERIFIED_DATA,
+    ) == []
 
 
 def test_single_agent_fallback_is_readable_english_markdown() -> None:
@@ -130,6 +191,40 @@ def test_arabic_report_fallback_is_readable_markdown() -> None:
     assert "| إيرادات المبيعات المكتملة | 200.00 |" in result
     assert "```json" not in result
     assert '"results"' not in result
+
+
+def test_comprehensive_fallback_is_concise_english_markdown() -> None:
+    result = ground_financial_reply(
+        "Projected revenue is 999999.",
+        COMPREHENSIVE_DATA,
+        "Show me a complete financial summary.",
+    )
+
+    assert "### Verified financial summary" in result
+    assert "#### Sales" in result
+    assert "#### Tracked cash flow" in result
+    assert "Completed revenue: **200.00**" in result
+    assert "| Metric | Value |" not in result
+    assert "overview" not in result
+    assert "record_ids" not in result
+    assert "999999" not in result
+    assert "### Data sources" in result
+
+
+def test_comprehensive_fallback_is_concise_arabic_markdown() -> None:
+    result = ground_financial_reply(
+        "توقع غير مدعوم 999999.",
+        COMPREHENSIVE_DATA,
+        "أعطني ملخصًا ماليًا شاملًا.",
+    )
+
+    assert "### ملخص مالي متحقق منه" in result
+    assert "#### المبيعات" in result
+    assert "إيرادات المبيعات المكتملة: **200.00**" in result
+    assert "| البيان | القيمة |" not in result
+    assert "record_ids" not in result
+    assert "999999" not in result
+    assert "### مصادر البيانات" in result
 
 
 def test_raw_json_agent_reply_is_never_returned_to_user() -> None:

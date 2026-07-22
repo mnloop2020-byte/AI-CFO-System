@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from copy import deepcopy
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -89,6 +90,23 @@ _ARABIC_LABELS = {
     "vendor": "المورّد",
     "verified_metrics": "",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class FinancialReplyValidation:
+    is_empty: bool
+    contains_internal_json: bool
+    unsupported_numbers: tuple[str, ...]
+    unsupported_claims: tuple[str, ...]
+
+    @property
+    def is_valid(self) -> bool:
+        return not (
+            self.is_empty
+            or self.contains_internal_json
+            or self.unsupported_numbers
+            or self.unsupported_claims
+        )
 
 
 def enrich_financial_data(metrics: dict[str, Any]) -> dict[str, Any]:
@@ -183,24 +201,46 @@ def find_unsupported_numbers(
     return unsupported
 
 
-def _has_unsupported_claims(
+def find_unsupported_claims(
     reply: str,
     verified_data: dict[str, Any],
-) -> bool:
+) -> list[str]:
     lowered = reply.casefold()
     company = verified_data.get("company_context", {})
+    unsupported: list[str] = []
 
     if company.get("currency") is None and any(
         marker.casefold() in lowered for marker in _CURRENCY_MARKERS
     ):
-        return True
+        unsupported.append("unconfigured_currency")
 
     unavailable_claim_patterns = (
-        r"bank balance\s+(?:is|was|equals|of)\s+(?!unavailable|not available)",
-        r"net vat payable\s+(?:is|was|equals|of)\s+(?!unavailable|not available)",
-        r"final net profit\s+(?:is|was|equals|of)\s+(?!unavailable|not available)",
+        (
+            "bank_balance_claim",
+            r"bank balance\s+(?:is|was|equals|of)\s+(?!unavailable|not available)",
+        ),
+        (
+            "net_vat_payable_claim",
+            r"net vat payable\s+(?:is|was|equals|of)\s+(?!unavailable|not available)",
+        ),
+        (
+            "final_net_profit_claim",
+            r"final net profit\s+(?:is|was|equals|of)\s+(?!unavailable|not available)",
+        ),
     )
-    return any(re.search(pattern, lowered) for pattern in unavailable_claim_patterns)
+    unsupported.extend(
+        reason
+        for reason, pattern in unavailable_claim_patterns
+        if re.search(pattern, lowered)
+    )
+    return unsupported
+
+
+def _has_unsupported_claims(
+    reply: str,
+    verified_data: dict[str, Any],
+) -> bool:
+    return bool(find_unsupported_claims(reply, verified_data))
 
 
 def _source_footer(verified_data: dict[str, Any], is_arabic: bool) -> str:
@@ -342,7 +382,332 @@ def _contains_internal_json(reply: str) -> bool:
     return False
 
 
+def validate_financial_reply(
+    reply: Any,
+    verified_data: dict[str, Any],
+) -> FinancialReplyValidation:
+    grounded = reply.strip() if isinstance(reply, str) else ""
+    return FinancialReplyValidation(
+        is_empty=not grounded,
+        contains_internal_json=(
+            _contains_internal_json(grounded) if grounded else False
+        ),
+        unsupported_numbers=tuple(
+            dict.fromkeys(find_unsupported_numbers(grounded, verified_data))
+        ),
+        unsupported_claims=tuple(
+            find_unsupported_claims(grounded, verified_data)
+        ),
+    )
+
+
+def _get_mapping(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _format_summary_amount(value: Any, currency: Any) -> str | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+        return None
+    formatted = f"{Decimal(str(value)):,.2f}"
+    if isinstance(currency, str) and currency.strip():
+        return f"{formatted} {currency.strip()}"
+    return formatted
+
+
+def _append_metric(
+    lines: list[str],
+    *,
+    label: str,
+    value: Any,
+    currency: Any = None,
+    numeric_amount: bool = False,
+) -> None:
+    if value is None or isinstance(value, bool):
+        return
+    if numeric_amount:
+        formatted = _format_summary_amount(value, currency)
+        if formatted is None:
+            return
+    else:
+        formatted = str(value)
+    lines.append(f"- {label}: **{formatted}**")
+
+
+def _safe_comprehensive_summary(
+    verified_data: dict[str, Any],
+    is_arabic: bool,
+) -> str | None:
+    section_keys = {
+        "sales",
+        "inventory",
+        "accounting",
+        "cash_flow",
+        "tax",
+        "fraud_risk",
+    }
+    if len(section_keys.intersection(verified_data)) < 3:
+        return None
+
+    company = _get_mapping(verified_data.get("company_context"))
+    currency = company.get("currency")
+    sales = _get_mapping(verified_data.get("sales"))
+    inventory = _get_mapping(verified_data.get("inventory"))
+    inventory_overview = _get_mapping(inventory.get("overview"))
+    low_inventory = _get_mapping(inventory.get("low_inventory"))
+    valuation = _get_mapping(inventory.get("valuation"))
+    accounting = _get_mapping(verified_data.get("accounting"))
+    cash_flow = _get_mapping(verified_data.get("cash_flow"))
+    tax = _get_mapping(verified_data.get("tax"))
+    review = _get_mapping(verified_data.get("fraud_risk"))
+
+    if is_arabic:
+        lines = [
+            "### ملخص مالي متحقق منه",
+            "",
+            (
+                "تعذر اعتماد الصياغة التفسيرية بعد التحقق، لذلك يعرض النظام "
+                "خلاصة موجزة من القيم الحتمية فقط."
+            ),
+            "",
+            "#### المبيعات",
+        ]
+        _append_metric(
+            lines,
+            label="إيرادات المبيعات المكتملة",
+            value=sales.get("completed_revenue"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        _append_metric(
+            lines,
+            label="عدد المبيعات المكتملة",
+            value=sales.get("completed_sales_count"),
+        )
+        _append_metric(
+            lines,
+            label="الوحدات المباعة",
+            value=sales.get("total_units_sold"),
+        )
+        lines.extend(["", "#### المصروفات والنتيجة التشغيلية"])
+        _append_metric(
+            lines,
+            label="إجمالي المصروفات المسجلة",
+            value=accounting.get("total_expenses"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        _append_metric(
+            lines,
+            label="النتيجة التشغيلية الأولية",
+            value=accounting.get("preliminary_operating_result"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        lines.extend(["", "#### التدفق النقدي المتتبع"])
+        _append_metric(
+            lines,
+            label="التدفقات الداخلة المتتبعة",
+            value=cash_flow.get("tracked_cash_inflows"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        _append_metric(
+            lines,
+            label="التدفقات الخارجة المسجلة",
+            value=cash_flow.get("recorded_cash_outflows"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        _append_metric(
+            lines,
+            label="صافي التدفق النقدي المتتبع",
+            value=cash_flow.get("net_tracked_cash_flow"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        _append_metric(
+            lines,
+            label="المبالغ المتوقعة من الفواتير غير المدفوعة",
+            value=cash_flow.get("expected_unpaid_inflows"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        lines.extend(["", "#### المخزون"])
+        _append_metric(
+            lines,
+            label="عدد المنتجات",
+            value=inventory_overview.get("count"),
+        )
+        _append_metric(
+            lines,
+            label="المنتجات عند أو دون حد إعادة الطلب",
+            value=low_inventory.get("count"),
+        )
+        _append_metric(
+            lines,
+            label="قيمة تكلفة المخزون",
+            value=valuation.get("total_cost_value"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        lines.extend(["", "#### الضرائب والمراجعة"])
+        _append_metric(
+            lines,
+            label="ضريبة القيمة المضافة المسجلة في الفواتير",
+            value=tax.get("total_invoiced_vat"),
+            currency=currency,
+            numeric_amount=True,
+        )
+        _append_metric(
+            lines,
+            label="المصروفات المعلّمة للمراجعة البشرية",
+            value=review.get("flagged_expenses_count"),
+        )
+        lines.extend(
+            [
+                "",
+                (
+                    "> النتيجة التشغيلية أولية وليست صافي ربح نهائي. "
+                    "التدفق النقدي المتتبع ليس رصيد البنك، وضريبة الفواتير "
+                    "ليست صافي الضريبة المستحقة. عناصر المراجعة لا تثبت الاحتيال."
+                ),
+                (
+                    "> العملة غير محددة في إعدادات الشركة."
+                    if not currency
+                    else f"> العملة المعدّة: {currency}."
+                ),
+            ]
+        )
+        return "\n".join(lines)
+
+    lines = [
+        "### Verified financial summary",
+        "",
+        (
+            "The narrative could not be approved after validation, so this "
+            "concise summary shows deterministic values only."
+        ),
+        "",
+        "#### Sales",
+    ]
+    _append_metric(
+        lines,
+        label="Completed revenue",
+        value=sales.get("completed_revenue"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    _append_metric(
+        lines,
+        label="Completed sales",
+        value=sales.get("completed_sales_count"),
+    )
+    _append_metric(
+        lines,
+        label="Units sold",
+        value=sales.get("total_units_sold"),
+    )
+    lines.extend(["", "#### Expenses and operating result"])
+    _append_metric(
+        lines,
+        label="Recorded expenses",
+        value=accounting.get("total_expenses"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    _append_metric(
+        lines,
+        label="Preliminary operating result",
+        value=accounting.get("preliminary_operating_result"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    lines.extend(["", "#### Tracked cash flow"])
+    _append_metric(
+        lines,
+        label="Tracked cash inflows",
+        value=cash_flow.get("tracked_cash_inflows"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    _append_metric(
+        lines,
+        label="Recorded cash outflows",
+        value=cash_flow.get("recorded_cash_outflows"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    _append_metric(
+        lines,
+        label="Net tracked cash flow",
+        value=cash_flow.get("net_tracked_cash_flow"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    _append_metric(
+        lines,
+        label="Expected inflows from unpaid invoices",
+        value=cash_flow.get("expected_unpaid_inflows"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    lines.extend(["", "#### Inventory"])
+    _append_metric(
+        lines,
+        label="Products",
+        value=inventory_overview.get("count"),
+    )
+    _append_metric(
+        lines,
+        label="Products at or below reorder level",
+        value=low_inventory.get("count"),
+    )
+    _append_metric(
+        lines,
+        label="Inventory cost value",
+        value=valuation.get("total_cost_value"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    lines.extend(["", "#### Tax and review"])
+    _append_metric(
+        lines,
+        label="VAT recorded on invoices",
+        value=tax.get("total_invoiced_vat"),
+        currency=currency,
+        numeric_amount=True,
+    )
+    _append_metric(
+        lines,
+        label="Expenses flagged for human review",
+        value=review.get("flagged_expenses_count"),
+    )
+    lines.extend(
+        [
+            "",
+            (
+                "> The operating result is preliminary, not final net profit. "
+                "Tracked cash flow is not the bank balance, invoiced VAT is not "
+                "net VAT payable, and review flags do not confirm fraud."
+            ),
+            (
+                "> Company currency is not configured."
+                if not currency
+                else f"> Configured currency: {currency}."
+            ),
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _safe_fallback(verified_data: dict[str, Any], is_arabic: bool) -> str:
+    comprehensive_summary = _safe_comprehensive_summary(
+        verified_data,
+        is_arabic,
+    )
+    if comprehensive_summary is not None:
+        return comprehensive_summary
+
     heading = "### البيانات المالية المتحقق منها" if is_arabic else "### Verified financial data"
     note = (
         "تعذر اعتماد الصياغة التفسيرية لأنها احتوت ادعاءً غير مدعوم. "
@@ -385,12 +750,7 @@ def ground_financial_reply(
     is_arabic = any("\u0600" <= character <= "\u06ff" for character in user_message)
     grounded = reply.strip() if isinstance(reply, str) else ""
 
-    if (
-        not grounded
-        or _contains_internal_json(grounded)
-        or find_unsupported_numbers(grounded, verified_data)
-        or _has_unsupported_claims(grounded, verified_data)
-    ):
+    if not validate_financial_reply(grounded, verified_data).is_valid:
         grounded = _safe_fallback(verified_data, is_arabic)
 
     source_heading = "### مصادر البيانات" if is_arabic else "### Data sources"
