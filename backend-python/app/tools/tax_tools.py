@@ -1,4 +1,3 @@
-from app.services.invoices_store import get_invoices
 from app.schemas.invoices_schema import InvoiceResponse
 from app.services.invoices_store import get_invoices
 
@@ -48,6 +47,13 @@ def get_tax_summary(
         "input_vat_available": False,
         "net_vat_payable_available": False,
         "tax_jurisdiction_configured": False,
+        "data_sources": [
+            {
+                "table": "invoices",
+                "record_ids": [invoice.id for invoice in invoices],
+                "calculation": "total_invoiced_vat = sum(vat_amount)",
+            }
+        ],
     }
 
 

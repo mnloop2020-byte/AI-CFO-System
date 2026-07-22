@@ -77,7 +77,20 @@ def get_accounting_summary(
             sum(float(invoice.vat_amount) for invoice in invoices),
             2,
         ),
+        "data_sources": [
+            *sales_summary.get("data_sources", []),
+            {
+                "table": "expenses",
+                "record_ids": [expense.id for expense in expenses],
+                "calculation": "total_expenses = sum(amount)",
+            },
+            {
+                "table": "invoices",
+                "record_ids": [invoice.id for invoice in invoices],
+                "calculation": "total_invoiced_vat = sum(vat_amount)",
+            },
+        ],
     }
 
 
-# Note: This tool combines sales, expenses, and invoice data into one accounting summary without double-counting invoice revenue. 
+# Note: This tool combines sales, expenses, and invoice data without double-counting invoice revenue.

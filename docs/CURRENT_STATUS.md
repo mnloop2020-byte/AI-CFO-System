@@ -66,12 +66,12 @@ Last updated: 2026-07-22
 
 ## Current checkpoint
 
-Phase 1 — Single Company Authentication — is complete. Phase 2 is in progress through immediate KPI refresh. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
+Phase 1 — Single Company Authentication — and Phase 2 functional integrations are complete. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
 
-The remaining Phase 2 order is:
+The next implementation order is:
 
-1. Harden CEO Agent claims and source attribution.
-2. Begin AI Financial Action Center only after Phase 2 is stable.
+1. Build the AI Financial Action Center database and deterministic engine.
+2. Add the three approved action lifecycles and bilingual interface.
 
 ## Phase 2 progress
 
@@ -90,6 +90,10 @@ The remaining Phase 2 order is:
 - **2.4 Immediate KPI refresh is complete.** A lightweight typed browser event invalidates only the affected financial resource after successful create, update, or delete operations.
 - Sales, Expenses, Inventory, and Invoices pages reload their live KPI cards immediately after their table mutates. The Dashboard subscribes to all four financial resources and refreshes its summary on the next visit without requiring a manual browser reload.
 - CRUD tables retain their existing optimistic row updates and error handling; the event carries only resource and operation names, never record contents or `company_id`. TypeScript and the Next.js production build passed after integration.
+- **2.5 Deterministic agent grounding is complete.** Sales, accounting, cash-flow, inventory, tax, fraud, CEO, and report calculations remain Python functions over RLS-scoped records; the LLM is limited to explanation and wording.
+- Verified payloads now include trusted company currency/tax context, explicit availability flags, source tables, source record IDs, and calculation descriptions. Financial replies receive a deterministic source footer.
+- A post-generation guard rejects numeric claims absent from the verified payload, unconfigured currency symbols, and unavailable bank-balance, final-net-profit, or net-VAT claims. Rejected narratives are replaced by a deterministic data-only fallback rather than shown to the user.
+- The user's existing `accounting_agent.py` edit remains untouched; Accounting output is guarded centrally by the Orchestrator. All 32 backend tests and Python compilation pass, including new unsupported-claim and deterministic-calculation tests.
 
 ## Verification note
 

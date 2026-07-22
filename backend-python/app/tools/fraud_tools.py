@@ -88,6 +88,17 @@ def get_fraud_risk_summary(
             + len(duplicate_invoice_numbers)
         ),
         "fraud_confirmed": False,
+        "data_sources": [
+            {
+                "table": "expenses",
+                "record_ids": [expense.id for expense in expenses],
+                "calculation": "flagged records and exact duplicate-field candidates",
+            },
+            {
+                "table": "invoices",
+                "record_ids": [invoice.id for invoice in invoices],
+                "calculation": "duplicate invoice-number candidates",
+            },
+        ],
     }
 
-    

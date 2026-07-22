@@ -1,6 +1,7 @@
 import json
 
 from app.ai.llm import get_llm_client
+from app.ai.financial_grounding import enrich_financial_data, ground_financial_reply
 from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.schemas.chat_schema import ChatMessage
@@ -11,7 +12,7 @@ def run_report_writer_agent(
     user_message: str,
     old_messages: list[ChatMessage] | None = None,
 ) -> str:
-    report_data = get_cfo_report_data()
+    report_data = enrich_financial_data(get_cfo_report_data())
 
     history_messages = [
         {
@@ -65,4 +66,8 @@ without a currency symbol and say that the currency is unspecified.
 
     reply = response.choices[0].message.content
 
-    return reply or "No response generated."
+    return ground_financial_reply(
+        reply or "",
+        report_data,
+        user_message,
+    )

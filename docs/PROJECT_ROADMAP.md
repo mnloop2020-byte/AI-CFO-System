@@ -38,9 +38,9 @@ Execute and test each item in this order:
 3. **Complete:** Display real report history and provide short-lived signed/protected downloads.
 4. **Complete:** Store invoice and expense attachments in private Storage.
 5. **Complete:** Refresh Dashboard and page KPIs immediately after CRUD without manual refresh.
-6. Improve CEO Agent grounding so figures and conclusions come only from verified data, with clear sources where appropriate.
+6. **Complete:** Improve CEO Agent and financial-agent grounding so figures and conclusions come only from verified data, with deterministic fallback and clear sources.
 
-Status: **in progress**. Company Settings, reports, private financial attachments, and immediate KPI refresh are complete; deterministic agent grounding is next.
+Status: **complete**. Company Settings, persisted private PDF reports, private financial attachments, immediate KPI refresh, and deterministic agent grounding are implemented and tested.
 
 ## Phase 3: AI Financial Action Center
 
@@ -50,7 +50,7 @@ Status: **in progress**. Company Settings, reports, private financial attachment
 - First use cases: overdue-invoice collection drafts, low-stock review, and flagged/unusual expense review against RAG policy when available.
 - Bilingual RTL/LTR UI for summaries, filters, details, evidence, assignment, approval/rejection, status changes, completion, and timelines.
 
-Status: pending until Phase 2 is stable.
+Status: next. Phase 2 is stable and the Action Center database/engine is the next implementation target.
 
 ## Phase 4: Security and quality hardening
 

@@ -55,6 +55,20 @@ def get_cashflow_summary(
             2,
         ),
         "is_bank_balance_available": False,
+        "data_sources": [
+            {
+                "table": "invoices",
+                "record_ids": [invoice.id for invoice in invoices],
+                "calculation": (
+                    "tracked inflows use paid invoices; expected inflows use unpaid invoices"
+                ),
+            },
+            {
+                "table": "expenses",
+                "record_ids": [expense.id for expense in expenses],
+                "calculation": "recorded_cash_outflows = sum(expense.amount)",
+            },
+        ],
     }
 
 #Note: This tool calculates tracked cash flow from paid invoices and recorded expenses without pretending it knows the bank balance.

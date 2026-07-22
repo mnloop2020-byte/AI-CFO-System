@@ -101,6 +101,15 @@ def get_inventory_analysis() -> dict:
                 2,
             ),
         },
+        "data_sources": [
+            {
+                "table": "inventory",
+                "record_ids": [item.id for item in items],
+                "calculation": (
+                    "low stock when quantity <= reorder_level; valuations use quantity and configured prices"
+                ),
+            }
+        ],
     }
 # Note: This tool reads inventory once and returns the overview, low-stock products, and financial valuation together.
 

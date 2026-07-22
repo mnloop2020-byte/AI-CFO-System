@@ -1,8 +1,12 @@
+from app.schemas.sales_schema import SaleResponse
 from app.services.sales_store import get_sales
 
 
-def get_sales_summary() -> dict:
-    sales = get_sales()
+def get_sales_summary(
+    sales: list[SaleResponse] | None = None,
+) -> dict:
+    if sales is None:
+        sales = get_sales()
 
     completed_sales = [
         sale
@@ -73,4 +77,13 @@ def get_sales_summary() -> dict:
         ),
         "status_breakdown": status_breakdown,
         "top_products": top_products,
+        "data_sources": [
+            {
+                "table": "sales",
+                "record_ids": [sale.id for sale in sales],
+                "calculation": (
+                    "completed_revenue = sum(total_amount) where status is completed"
+                ),
+            }
+        ],
     }

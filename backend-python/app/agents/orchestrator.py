@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Literal
 # while Literal restricts agent names to specific strings
 from app.ai.llm import get_llm_client
+from app.ai.financial_grounding import enrich_financial_data, ground_financial_reply
 from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.rag.get_context import get_context
@@ -321,14 +322,18 @@ def run_orchestrator(
 
     if agent_runner is not None:
         print(f"DELEGATING TO {selected_agent.upper()} AGENT")
-
-        return (
-            agent_runner(
-                user_message=user_message,
-                old_messages=old_messages,
-            ),
-            [],
+        reply = agent_runner(
+            user_message=user_message,
+            old_messages=old_messages,
         )
+
+        if selected_agent == "accounting":
+            from app.tools.accounting_tools import get_accounting_summary
+
+            verified_data = enrich_financial_data(get_accounting_summary())
+            reply = ground_financial_reply(reply, verified_data, user_message)
+
+        return reply, []
 
     agent_instruction = get_agent_instruction(selected_agent)
     rag_context = get_context(user_message)
