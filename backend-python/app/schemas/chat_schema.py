@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.config.settings import CHAT_MAX_MESSAGE_CHARS
 from app.schemas.rag_schema import DocumentSource
 
 
@@ -14,7 +15,7 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=20_000)
+    message: str = Field(min_length=1, max_length=CHAT_MAX_MESSAGE_CHARS)
     conversation_id: str | None = None
 
 

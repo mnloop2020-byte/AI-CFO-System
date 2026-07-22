@@ -13,6 +13,11 @@ OPENROUTER_BASE_URL = os.getenv(
     "https://openrouter.ai/api/v1",
 )
 LLM_MODEL = os.getenv("LLM_MODEL", "google/gemini-2.5-flash")
+LLM_TIMEOUT_SECONDS = float(os.getenv("LLM_TIMEOUT_SECONDS", "45"))
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "2"))
+CHAT_MAX_MESSAGE_CHARS = int(os.getenv("CHAT_MAX_MESSAGE_CHARS", "8000"))
+CHAT_MAX_HISTORY_MESSAGES = int(os.getenv("CHAT_MAX_HISTORY_MESSAGES", "20"))
+CHAT_MAX_HISTORY_CHARS = int(os.getenv("CHAT_MAX_HISTORY_CHARS", "12000"))
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY")
@@ -29,6 +34,7 @@ RAG_DOCUMENT_BUCKET = os.getenv("RAG_DOCUMENT_BUCKET", "documents")
 RAG_MAX_FILE_SIZE_BYTES = int(
     os.getenv("RAG_MAX_FILE_SIZE_BYTES", str(10 * 1024 * 1024))
 )
+RAG_MAX_CONTEXT_CHARS = int(os.getenv("RAG_MAX_CONTEXT_CHARS", "6000"))
 
 
 # Note: This file loads OpenRouter, Supabase, and RAG settings from backend-python/.env.

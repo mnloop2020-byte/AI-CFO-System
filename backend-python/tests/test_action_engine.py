@@ -143,3 +143,10 @@ def test_expense_policy_match_is_traceable_and_never_declares_fraud() -> None:
     assert evidence["policy_match"]["similarity"] == 0.82
     assert evidence["fraud_confirmed"] is False
     assert "human comparison only" in evidence["policy_match"]["interpretation"]
+
+
+def test_action_update_cannot_enable_external_execution() -> None:
+    with pytest.raises(ValidationError):
+        FinancialActionUpdate.model_validate(
+            {"proposed_action": {"external_execution_allowed": True}}
+        )

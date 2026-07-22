@@ -1,4 +1,6 @@
 from app.agents.orchestrator import run_orchestrator
+from app.config.settings import CHAT_MAX_HISTORY_CHARS, CHAT_MAX_HISTORY_MESSAGES
+from app.schemas.chat_schema import ChatMessage
 from app.schemas.rag_schema import DocumentSource
 from app.services.conversation_store import (
     create_conversation,
@@ -36,6 +38,19 @@ def _append_source_list(
     return f"{reply.rstrip()}\n\n{heading}\n" + "\n".join(source_lines)
 
 
+def _bounded_llm_history(messages: list[ChatMessage]) -> list[ChatMessage]:
+    selected: list[ChatMessage] = []
+    used_chars = 0
+    for message in reversed(messages[-CHAT_MAX_HISTORY_MESSAGES:]):
+        remaining = CHAT_MAX_HISTORY_CHARS - used_chars
+        if remaining <= 0:
+            break
+        content = message.content[-remaining:]
+        selected.append(message.model_copy(update={"content": content}))
+        used_chars += len(content)
+    return list(reversed(selected))
+
+
 def handle_chat(
     message: str,
     conversation_id: str | None = None,
@@ -51,7 +66,7 @@ def handle_chat(
     old_messages = get_conversation_messages(conversation_id)
     # Get previous messages from Supabase for this conversation.
 
-    reply, sources = run_orchestrator(message, old_messages)
+    reply, sources = run_orchestrator(message, _bounded_llm_history(old_messages))
     reply = _append_source_list(reply, sources, message)
     # Send the current user message and old messages to the Orchestrator.
 

@@ -96,7 +96,23 @@ def main() -> None:
     assert len(actions) >= 2
     assert second_result["existing"] >= 2
 
+    audited_update = client.patch(
+        f"/actions/{actions[0]['id']}",
+        headers=headers,
+        json={"title_en": actions[0]["title_en"]},
+    )
+    assert audited_update.status_code == 200, audited_update.text
+
     assert client.get("/actions", headers=role_headers["viewer"]).status_code == 200
+    owner_audit = client.get("/audit/events?limit=10", headers=headers)
+    assert owner_audit.status_code == 200, owner_audit.text
+    assert owner_audit.json()
+    assert client.get(
+        "/audit/events?limit=10", headers=role_headers["admin"]
+    ).status_code == 200
+    assert client.get(
+        "/audit/events?limit=10", headers=role_headers["viewer"]
+    ).status_code == 403
     assert client.post("/actions/detect", headers=role_headers["viewer"]).status_code == 403
     assert (
         client.patch(
@@ -236,6 +252,7 @@ def main() -> None:
                 "policy_match_available"
             ],
             "value_metrics_without_false_collection_attribution": True,
+            "security_audit_roles_and_event": True,
             "action_statuses": {
                 action["action_type"]: action["status"] for action in actions
             },

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 ActionType = Literal["overdue_invoice", "low_inventory", "expense_review"]
@@ -88,6 +89,19 @@ class FinancialActionUpdate(BaseModel):
     recommendation_ar: str | None = Field(default=None, min_length=1, max_length=4000)
     proposed_action: dict[str, Any] | None = None
     due_date: date | None = None
+
+    @field_validator("proposed_action")
+    @classmethod
+    def validate_proposed_action(
+        cls, value: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        if value is None:
+            return value
+        if value.get("external_execution_allowed") is not False:
+            raise ValueError("External action execution must remain disabled.")
+        if len(json.dumps(value, ensure_ascii=False, default=str)) > 20_000:
+            raise ValueError("The proposed action payload is too large.")
+        return value
 
 
 class FinancialActionAssignment(BaseModel):

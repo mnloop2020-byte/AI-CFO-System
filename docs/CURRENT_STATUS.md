@@ -120,6 +120,18 @@ The next implementation order is:
 - `proven_collected_amount` deliberately remains unavailable until invoices contain both a verifiable `paid_at` timestamp and a payment transaction reference. The system therefore does not attribute the current invoice value or any collection to AI.
 - The live metrics check passed with the current evidence state (no provable followed-up invoice or average delay at that moment), and the API returned the explicit non-attribution explanation. The backend suite reports 38 passing tests; TypeScript and the production build compile successfully.
 
+## Phase 6 progress
+
+- **Security and reliability hardening is complete for Pilot scope.** FastAPI now applies bounded per-process rate limits to Auth, Chat, Reports, RAG/attachment uploads, and Action writes/detection, returning `429` with `Retry-After`.
+- Request logs are structured JSON and redact UUIDs, emails, and Bearer tokens. They exclude query strings, bodies, financial values, prompts, replies, and document contents.
+- OpenRouter calls have 45-second timeouts, at most two retries, and centralized token-usage/status logging without prompt content. Chat messages, history count/characters, and RAG context have explicit configurable bounds.
+- RAG context is wrapped as untrusted document evidence with explicit prompt-injection isolation. Agent capability boundaries are documented, and action payload validation rejects attempts to enable external execution.
+- The frontend sends CSP, anti-framing, MIME-sniffing, referrer, and browser-permission headers. Existing local-only redirect validation remains in place; React/Markdown rendering does not enable raw HTML. Bearer-protected FastAPI writes are not cookie-authenticated CSRF targets.
+- Migration `20260722140000_add_security_audit_events.sql` (SHA-256 `6D0C05958010E6CB25F88279299C5DA678C71D923D1C8821B581EDF7C90C1BE0`) was applied once. RLS, one Owner/Admin read policy, and seven safe metadata-only triggers were verified with unchanged protected counts.
+- A live action update created one audit event containing no protected field names. Owner/Admin audit reads returned `200`, Viewer returned `403`, and no financial content, token hash, Storage path, RAG evidence, or proposed-action payload was stored in the general audit row.
+- Liveness/readiness endpoints pass. Backup and isolated restore-rehearsal procedures are documented in `docs/SECURITY_OPERATIONS.md`; no destructive restore was run. The backend suite reports 44 passing tests, Python compilation passes, TypeScript passes, and a new production build ID was generated.
+- Production limitation: the current limiter is process-local and must be replaced with a shared Redis-backed limiter before multi-instance public deployment. MFA remains deferred and required before Production readiness.
+
 ## Verification note
 
 The in-app browser completed the Expenses CRUD test and the Chat history restore/new-conversation test. Inventory and Invoices were verified through TypeScript, Next.js route compilation, HTTP 200 responses, and direct read-only API checks. Visual CRUD verification for those two sections remains desirable in the user's local browser.

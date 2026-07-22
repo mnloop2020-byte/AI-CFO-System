@@ -1,7 +1,10 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.middleware.security import RequestSecurityMiddleware
+
 from app.routes.auth import router as auth_router
+from app.routes.audit import router as audit_router
 from app.routes.actions import router as actions_router
 from app.routes.attachments import router as attachments_router
 from app.routes.chat import router as chat_router
@@ -15,8 +18,10 @@ from app.routes.rag import router as rag_router
 from app.routes.reports import router as reports_router
 from app.routes.sales import router as sales_router
 from app.security.authentication import require_authenticated_request
+from app.utils.logger import configure_logging
 
 
+configure_logging()
 app = FastAPI(title="AI CFO Python Backend")
 
 
@@ -44,6 +49,7 @@ app.add_middleware(
         "Content-Type",
     ],
 )
+app.add_middleware(RequestSecurityMiddleware)
 
 
 app.include_router(health_router)
@@ -51,6 +57,7 @@ app.include_router(auth_router)
 protected_dependencies = [Depends(require_authenticated_request)]
 
 app.include_router(company_router, dependencies=protected_dependencies)
+app.include_router(audit_router, dependencies=protected_dependencies)
 app.include_router(actions_router, dependencies=protected_dependencies)
 app.include_router(attachments_router, dependencies=protected_dependencies)
 app.include_router(chat_router, dependencies=protected_dependencies)

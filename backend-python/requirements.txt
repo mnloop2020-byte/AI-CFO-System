@@ -3,6 +3,7 @@ fastapi
 uvicorn
 python-dotenv
 openai
+httpx
 pydantic
 supabase
 sentence-transformers
