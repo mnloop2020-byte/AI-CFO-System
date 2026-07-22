@@ -20,6 +20,7 @@ import {
 import SaleForm from "@/components/crm/SaleForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import Modal from "@/components/ui/Modal";
+import { notifyDataChanged } from "@/lib/data-events";
 import {
   getCustomers,
   type Customer,
@@ -306,6 +307,11 @@ export default function SalesTable() {
         );
       }
 
+      notifyDataChanged(
+        "sales",
+        editingSale ? "update" : "create",
+      );
+
       setModalOpen(false);
       setEditingSale(null);
     } catch (requestError) {
@@ -352,6 +358,8 @@ export default function SalesTable() {
             currentSale.id !== sale.id,
         ),
       );
+
+      notifyDataChanged("sales", "delete");
 
       setSuccessMessage(
         isArabic

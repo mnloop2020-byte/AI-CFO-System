@@ -31,6 +31,7 @@ import {
   type CreateCustomerInput,
   type Customer,
 } from "@/lib/customers";
+import { notifyDataChanged } from "@/lib/data-events";
 
 function getInitials(name: string) {
   return name
@@ -251,6 +252,11 @@ export default function CustomersTable() {
         );
       }
 
+      notifyDataChanged(
+        "customers",
+        editingCustomer ? "update" : "create",
+      );
+
       setModalOpen(false);
       setEditingCustomer(null);
     } catch (requestError) {
@@ -302,6 +308,8 @@ export default function CustomersTable() {
               customer.id,
           ),
       );
+
+      notifyDataChanged("customers", "delete");
 
       setSuccessMessage(
         language === "ar"

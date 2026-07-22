@@ -20,6 +20,7 @@ import DashboardWidget from "@/components/dashboard/DashboardWidget";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { subscribeToDataChanges } from "@/lib/data-events";
 import {
   getInventoryItems,
   type InventoryItem,
@@ -119,6 +120,17 @@ export default function InventoryPage() {
   useEffect(() => {
     void loadInventoryMetrics();
   }, [loadInventoryMetrics]);
+
+  useEffect(
+    () =>
+      subscribeToDataChanges(
+        ["inventory"],
+        () => {
+          void loadInventoryMetrics();
+        },
+      ),
+    [loadInventoryMetrics],
+  );
 
   const inventorySummary = useMemo(() => {
     const totalUnits = items.reduce(

@@ -1,6 +1,6 @@
 # AI CFO System Roadmap
 
-Last updated: 2026-07-21
+Last updated: 2026-07-22
 
 ## Product direction
 
@@ -37,10 +37,10 @@ Execute and test each item in this order:
 2. **Complete:** Persist generated PDF reports in the private `reports` bucket and `reports` table.
 3. **Complete:** Display real report history and provide short-lived signed/protected downloads.
 4. **Complete:** Store invoice and expense attachments in private Storage.
-5. Refresh Dashboard and page KPIs immediately after CRUD without manual refresh.
+5. **Complete:** Refresh Dashboard and page KPIs immediately after CRUD without manual refresh.
 6. Improve CEO Agent grounding so figures and conclusions come only from verified data, with clear sources where appropriate.
 
-Status: **in progress**. Company Settings, reports, and private financial attachments are complete; immediate KPI refresh is next.
+Status: **in progress**. Company Settings, reports, private financial attachments, and immediate KPI refresh are complete; deterministic agent grounding is next.
 
 ## Phase 3: AI Financial Action Center
 

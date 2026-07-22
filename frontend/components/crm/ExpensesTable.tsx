@@ -22,6 +22,7 @@ import ExpenseForm from "@/components/crm/ExpenseForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import Modal from "@/components/ui/Modal";
 import { uploadAttachment } from "@/lib/attachments";
+import { notifyDataChanged } from "@/lib/data-events";
 import {
   createExpense,
   deleteExpense,
@@ -278,6 +279,11 @@ export default function ExpensesTable() {
         );
       }
 
+      notifyDataChanged(
+        "expenses",
+        editingExpense ? "update" : "create",
+      );
+
       if (attachment) {
         try {
           await uploadAttachment("expense", savedExpense.id, attachment);
@@ -339,6 +345,8 @@ export default function ExpensesTable() {
             expense.id,
         ),
       );
+
+      notifyDataChanged("expenses", "delete");
 
       setSuccessMessage(
         isArabic

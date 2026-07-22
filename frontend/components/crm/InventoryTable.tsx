@@ -21,6 +21,7 @@ import {
 import InventoryForm from "@/components/crm/InventoryForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import Modal from "@/components/ui/Modal";
+import { notifyDataChanged } from "@/lib/data-events";
 import {
   createInventoryItem,
   deleteInventoryItem,
@@ -338,6 +339,11 @@ export default function InventoryTable() {
         );
       }
 
+      notifyDataChanged(
+        "inventory",
+        editingItem ? "update" : "create",
+      );
+
       setModalOpen(false);
       setEditingItem(null);
     } catch (requestError) {
@@ -380,6 +386,8 @@ export default function InventoryTable() {
             currentItem.id !== item.id,
         ),
       );
+
+      notifyDataChanged("inventory", "delete");
 
       setSuccessMessage(
         isArabic

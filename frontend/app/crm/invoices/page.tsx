@@ -20,6 +20,7 @@ import DashboardWidget from "@/components/dashboard/DashboardWidget";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { subscribeToDataChanges } from "@/lib/data-events";
 import {
   getInvoices,
   type Invoice,
@@ -148,6 +149,17 @@ export default function InvoicesPage() {
   useEffect(() => {
     void loadInvoiceMetrics();
   }, [loadInvoiceMetrics]);
+
+  useEffect(
+    () =>
+      subscribeToDataChanges(
+        ["invoices"],
+        () => {
+          void loadInvoiceMetrics();
+        },
+      ),
+    [loadInvoiceMetrics],
+  );
 
   const invoiceSummary = useMemo(() => {
     const totalInvoicedAmount =

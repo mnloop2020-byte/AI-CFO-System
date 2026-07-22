@@ -1,6 +1,6 @@
 # AI CFO System Current Status
 
-Last updated: 2026-07-21
+Last updated: 2026-07-22
 
 ## Completed localization
 
@@ -66,13 +66,12 @@ Last updated: 2026-07-21
 
 ## Current checkpoint
 
-Phase 1 — Single Company Authentication — is complete. Phase 2 is in progress, with Company Settings completed. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
+Phase 1 — Single Company Authentication — is complete. Phase 2 is in progress through immediate KPI refresh. The system has one company, multiple invited users, centralized roles, SSR-aware route protection, bearer-token verification, RLS, private Storage policies, and tested authorization boundaries.
 
 The remaining Phase 2 order is:
 
-1. Refresh Dashboard KPIs immediately after CRUD operations.
-2. Harden CEO Agent claims and source attribution.
-3. Begin AI Financial Action Center only after the preceding Phase 2 work is stable.
+1. Harden CEO Agent claims and source attribution.
+2. Begin AI Financial Action Center only after Phase 2 is stable.
 
 ## Phase 2 progress
 
@@ -88,6 +87,9 @@ The remaining Phase 2 order is:
 - FastAPI verifies file size, declared MIME, extension, and actual PDF/image signature before upload. Storage paths contain the trusted company, record type, record ID, and an opaque attachment ID; the frontend never supplies `company_id`.
 - The invoice and expense forms now upload new files after the financial record is saved. Existing records expose bilingual list, upload, signed download, and explicit attachment-only deletion controls.
 - Live tests passed for invoice PDF and expense PNG upload/list/download/delete, fake-PDF rejection `400`, Viewer upload denial `403`, Viewer read access `200`, and preservation of Invoice `1` and Expenses `3`. Only the two temporary attachment objects created by the test were removed.
+- **2.4 Immediate KPI refresh is complete.** A lightweight typed browser event invalidates only the affected financial resource after successful create, update, or delete operations.
+- Sales, Expenses, Inventory, and Invoices pages reload their live KPI cards immediately after their table mutates. The Dashboard subscribes to all four financial resources and refreshes its summary on the next visit without requiring a manual browser reload.
+- CRUD tables retain their existing optimistic row updates and error handling; the event carries only resource and operation names, never record contents or `company_id`. TypeScript and the Next.js production build passed after integration.
 
 ## Verification note
 

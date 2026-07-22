@@ -20,6 +20,7 @@ import DashboardWidget from "@/components/dashboard/DashboardWidget";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { subscribeToDataChanges } from "@/lib/data-events";
 import {
   getSales,
   type Sale,
@@ -168,6 +169,17 @@ export default function SalesPage() {
   useEffect(() => {
     void loadSalesMetrics();
   }, [loadSalesMetrics]);
+
+  useEffect(
+    () =>
+      subscribeToDataChanges(
+        ["sales"],
+        () => {
+          void loadSalesMetrics();
+        },
+      ),
+    [loadSalesMetrics],
+  );
 
   const salesSummary = useMemo(() => {
     const completedSales = sales.filter(

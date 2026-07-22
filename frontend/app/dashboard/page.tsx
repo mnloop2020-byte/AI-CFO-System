@@ -23,6 +23,7 @@ import DashboardWidget from "@/components/dashboard/DashboardWidget";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { subscribeToDataChanges } from "@/lib/data-events";
 import { getExpenses } from "@/lib/expenses";
 import { getInventoryItems } from "@/lib/inventory";
 import { getInvoices } from "@/lib/invoices";
@@ -268,6 +269,22 @@ export default function DashboardPage() {
   useEffect(() => {
     void loadDashboardData();
   }, [loadDashboardData]);
+
+  useEffect(
+    () =>
+      subscribeToDataChanges(
+        [
+          "sales",
+          "expenses",
+          "inventory",
+          "invoices",
+        ],
+        () => {
+          void loadDashboardData();
+        },
+      ),
+    [loadDashboardData],
+  );
 
   const dashboardMetrics = useMemo(
     () => [

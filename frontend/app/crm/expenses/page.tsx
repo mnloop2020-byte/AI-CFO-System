@@ -20,6 +20,7 @@ import DashboardWidget from "@/components/dashboard/DashboardWidget";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { subscribeToDataChanges } from "@/lib/data-events";
 import {
   getExpenses,
   type Expense,
@@ -77,6 +78,17 @@ export default function ExpensesPage() {
   useEffect(() => {
     void loadExpenseMetrics();
   }, [loadExpenseMetrics]);
+
+  useEffect(
+    () =>
+      subscribeToDataChanges(
+        ["expenses"],
+        () => {
+          void loadExpenseMetrics();
+        },
+      ),
+    [loadExpenseMetrics],
+  );
 
   const expenseSummary = useMemo(() => {
     const totalExpenses = expenses.reduce(

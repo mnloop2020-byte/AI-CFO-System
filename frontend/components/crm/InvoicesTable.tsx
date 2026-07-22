@@ -22,6 +22,7 @@ import InvoiceForm from "@/components/crm/InvoiceForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import Modal from "@/components/ui/Modal";
 import { uploadAttachment } from "@/lib/attachments";
+import { notifyDataChanged } from "@/lib/data-events";
 import {
   getCustomers,
   type Customer,
@@ -357,6 +358,11 @@ export default function InvoicesTable() {
         );
       }
 
+      notifyDataChanged(
+        "invoices",
+        editingInvoice ? "update" : "create",
+      );
+
       if (attachment) {
         try {
           await uploadAttachment("invoice", savedInvoice.id, attachment);
@@ -413,6 +419,8 @@ export default function InvoicesTable() {
             currentInvoice.id !== invoice.id,
         ),
       );
+
+      notifyDataChanged("invoices", "delete");
 
       setSuccessMessage(
         isArabic
