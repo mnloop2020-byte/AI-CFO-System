@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:chat": "node --test tests/chat-contract.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

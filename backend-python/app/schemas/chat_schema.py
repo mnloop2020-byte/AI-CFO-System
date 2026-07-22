@@ -20,6 +20,7 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
+    response_version: Literal["1"] = "1"
     reply: str
     conversation_id: str
     sources: list[DocumentSource] = Field(default_factory=list)

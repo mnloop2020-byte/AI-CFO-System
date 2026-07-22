@@ -1,22 +1,18 @@
 import { api } from "@/lib/api";
+import {
+  parseChatResponse,
+  type ChatLanguage,
+  type ChatResponse,
+} from "@/lib/chat-contract";
+
+export type {
+  ChatResponse,
+  DocumentSource,
+} from "@/lib/chat-contract";
 
 export type ChatRequest = {
   message: string;
   conversation_id?: string | null;
-};
-
-export type ChatResponse = {
-  reply: string;
-  conversation_id: string;
-  sources: DocumentSource[];
-};
-
-export type DocumentSource = {
-  document_id: string;
-  file_name: string;
-  chunk_index: number;
-  excerpt: string;
-  similarity: number | null;
 };
 
 export type ConversationSummary = {
@@ -38,13 +34,16 @@ export type DeleteConversationResponse = {
   conversation_id: string;
 };
 
-export function sendChatMessage(
+export async function sendChatMessage(
   data: ChatRequest,
-) {
-  return api.post<ChatResponse>(
+  language: ChatLanguage,
+): Promise<ChatResponse> {
+  const payload = await api.post<unknown>(
     "/chat",
     data,
   );
+
+  return parseChatResponse(payload, language);
 }
 
 export function getConversations() {

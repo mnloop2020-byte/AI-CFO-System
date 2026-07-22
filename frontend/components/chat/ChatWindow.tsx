@@ -25,6 +25,7 @@ import remarkGfm from "remark-gfm";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import ConversationHistory from "@/components/chat/ConversationHistory";
+import { getSafeAssistantContent } from "@/lib/chat-contract";
 import {
   deleteConversation,
   getConversationMessages,
@@ -76,7 +77,7 @@ function MarkdownContent({
   return (
     <div
       dir="auto"
-      className="text-sm leading-7 text-text-secondary"
+      className="min-w-0 break-words text-sm leading-7 text-text-secondary"
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -159,7 +160,7 @@ function MarkdownContent({
           pre: ({ children }) => (
             <pre
               dir="ltr"
-              className="my-4 overflow-x-auto rounded-xl bg-slate-900 p-4 text-left text-sm leading-6 text-slate-100"
+              className="my-4 max-w-full overflow-x-auto rounded-xl bg-slate-900 p-4 text-left text-sm leading-6 text-slate-100"
             >
               {children}
             </pre>
@@ -283,7 +284,13 @@ export default function ChatWindow() {
           (storedMessage) => ({
             id: storedMessage.id ?? createMessageId(),
             role: storedMessage.role,
-            content: storedMessage.content,
+            content:
+              storedMessage.role === "assistant"
+                ? getSafeAssistantContent(
+                    storedMessage.content,
+                    language,
+                  )
+                : storedMessage.content,
             conversationId:
               storedMessage.role === "assistant"
                 ? selectedConversationId
@@ -384,10 +391,13 @@ export default function ChatWindow() {
     setLastFailedMessage(cleanMessage);
 
     try {
-      const response = await sendChatMessage({
-        message: cleanMessage,
-        conversation_id: conversationId,
-      });
+      const response = await sendChatMessage(
+        {
+          message: cleanMessage,
+          conversation_id: conversationId,
+        },
+        language,
+      );
 
       setConversationId(
         response.conversation_id,
@@ -635,8 +645,8 @@ export default function ChatWindow() {
                 <Bot size={18} />
               </div>
 
-              <div className="max-w-4xl flex-1">
-                <div className="rounded-2xl rounded-ss-md border border-border bg-surface px-5 py-4 shadow-sm">
+              <div className="min-w-0 max-w-4xl flex-1">
+                <div className="min-w-0 rounded-2xl rounded-ss-md border border-border bg-surface px-5 py-4 shadow-sm">
                   <div className="mb-4 flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-text-primary">
                       AI CFO

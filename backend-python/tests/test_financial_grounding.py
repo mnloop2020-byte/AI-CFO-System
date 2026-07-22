@@ -47,6 +47,9 @@ def test_unsupported_number_forces_deterministic_fallback() -> None:
     assert "999999" not in result
     assert "### Data sources" in result
     assert "`sales`" in result
+    assert "```json" not in result
+    assert '"completed_revenue"' not in result
+    assert "| Completed revenue | 200.00 |" in result
 
 
 def test_unconfigured_currency_symbol_is_rejected() -> None:
@@ -65,6 +68,81 @@ def test_unavailable_bank_balance_claim_is_rejected() -> None:
         "How is cash?",
     )
     assert "narrative was withheld" in result
+
+
+def test_single_agent_fallback_is_readable_english_markdown() -> None:
+    result = ground_financial_reply(
+        None,
+        VERIFIED_DATA,
+        "Show me a complete financial summary.",
+    )
+
+    assert "### Verified financial data" in result
+    assert "| Metric | Value |" in result
+    assert "| Completed revenue | 200.00 |" in result
+    assert "```json" not in result
+    assert "{" not in result
+
+
+def test_multi_agent_report_hides_internal_results() -> None:
+    report_data = {
+        "agents": ["sales", "accounting"],
+        "results": {
+            "sales": {"completed_revenue": 200.0},
+            "accounting": {"total_expenses": 550.0},
+        },
+        "sales": {"completed_revenue": 200.0},
+        "accounting": {
+            "total_expenses": 550.0,
+            "preliminary_operating_result": -350.0,
+        },
+        "data_sources": [
+            {
+                "table": "sales",
+                "record_ids": ["sale-1"],
+            }
+        ],
+    }
+
+    result = ground_financial_reply(
+        "",
+        report_data,
+        "Show me a complete financial summary.",
+    )
+
+    assert "Sales › Completed revenue" in result
+    assert "Accounting › Total expenses" in result
+    assert "agents" not in result
+    assert "results" not in result
+    assert "sale-1" not in result
+    assert "```json" not in result
+
+
+def test_arabic_report_fallback_is_readable_markdown() -> None:
+    result = ground_financial_reply(
+        {"results": {"internal": True}},
+        VERIFIED_DATA,
+        "أعطني ملخصًا ماليًا شاملًا.",
+    )
+
+    assert "### البيانات المالية المتحقق منها" in result
+    assert "| البيان | القيمة |" in result
+    assert "| إيرادات المبيعات المكتملة | 200.00 |" in result
+    assert "```json" not in result
+    assert '"results"' not in result
+
+
+def test_raw_json_agent_reply_is_never_returned_to_user() -> None:
+    result = ground_financial_reply(
+        '{"agents":["sales"],"results":{"completed_revenue":200}}',
+        VERIFIED_DATA,
+        "Show me a complete financial summary.",
+    )
+
+    assert '"agents"' not in result
+    assert '"results"' not in result
+    assert "```json" not in result
+    assert "| Completed revenue | 200.00 |" in result
 
 
 def test_deterministic_financial_tools_preserve_distinct_concepts() -> None:
