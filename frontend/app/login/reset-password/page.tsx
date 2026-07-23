@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { KeyRound, LoaderCircle } from "lucide-react";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { validateNewPassword } from "@/lib/profile-validation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
@@ -22,11 +23,21 @@ export default function ResetPasswordPage() {
     const formData = new FormData(event.currentTarget);
     const password = String(formData.get("password") ?? "");
     const confirmation = String(formData.get("confirmation") ?? "");
-    if (password.length < 10 || password !== confirmation) {
+    let passwordError: string | null = null;
+    try {
+      validateNewPassword(password);
+    } catch {
+      passwordError = isArabic
+        ? "استخدم 12 حرفًا على الأقل مع حرف كبير وصغير ورقم ورمز خاص."
+        : "Use at least 12 characters with uppercase, lowercase, number, and symbol.";
+    }
+
+    if (passwordError || password !== confirmation) {
       setErrorMessage(
-        isArabic
-          ? "استخدم 10 أحرف على الأقل وتأكد من تطابق كلمتي المرور."
-          : "Use at least 10 characters and make sure both passwords match.",
+        passwordError ??
+          (isArabic
+            ? "كلمتا المرور غير متطابقتين."
+            : "The passwords do not match."),
       );
       setSubmitting(false);
       return;
@@ -37,13 +48,11 @@ export default function ResetPasswordPage() {
       if (error) throw error;
       router.replace("/dashboard");
       router.refresh();
-    } catch (error) {
+    } catch {
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : isArabic
-            ? "تعذر تحديث كلمة المرور."
-            : "Unable to update the password.",
+        isArabic
+          ? "تعذر تحديث كلمة المرور. قد يكون رابط الاستعادة منتهيًا أو غير صالح."
+          : "Unable to update the password. The recovery link may be expired or invalid.",
       );
     } finally {
       setSubmitting(false);
@@ -79,7 +88,7 @@ export default function ResetPasswordPage() {
             <input
               type="password"
               name="password"
-              minLength={10}
+              minLength={12}
               required
               autoComplete="new-password"
               className="h-12 w-full rounded-xl border border-border px-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary-soft"
@@ -92,7 +101,7 @@ export default function ResetPasswordPage() {
             <input
               type="password"
               name="confirmation"
-              minLength={10}
+              minLength={12}
               required
               autoComplete="new-password"
               className="h-12 w-full rounded-xl border border-border px-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary-soft"

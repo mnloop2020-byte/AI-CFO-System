@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -26,6 +26,19 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const callbackError = new URLSearchParams(window.location.search).get(
+      "error",
+    );
+    if (callbackError === "confirmation_failed") {
+      setAuthError(
+        isArabic
+          ? "تعذر تأكيد رابط المصادقة. اطلب رابطًا جديدًا وحاول مرة أخرى."
+          : "The authentication link could not be confirmed. Request a new link and try again.",
+      );
+    }
+  }, [isArabic]);
 
   const benefits = isArabic
     ? [
@@ -68,13 +81,11 @@ export default function LoginPage() {
       );
       router.replace(nextPath);
       router.refresh();
-    } catch (error) {
+    } catch {
       setAuthError(
-        error instanceof Error
-          ? error.message
-          : isArabic
-            ? "تعذر تسجيل الدخول."
-            : "Unable to sign in.",
+        isArabic
+          ? "تعذر تسجيل الدخول. تحقق من بيانات الدخول أو تواصل مع مدير الشركة."
+          : "Unable to sign in. Check your credentials or contact the company administrator.",
       );
     } finally {
       setSubmitting(false);

@@ -150,6 +150,14 @@ The next implementation order is:
 - The live Action Center returned exactly three current actions, repeated detection created no duplicate, Viewer remained read-only, Accountant could detect but not assign/approve, fake `company_id` was rejected, and action/security audit events remained available.
 - Because the only approval-required live action was already `in_progress`, approval, rejection, and execution replay were verified through isolated route tests without forcing or rewriting the live action state.
 
+## Auth, members, and role-management verification
+
+- Member-management APIs now reject self role changes and self removal before mutation. Admin cannot modify/remove an Owner or assign the Owner role; PostgreSQL continues to protect the last Owner independently.
+- The Members interface derives every control from `/auth/me` permissions. Accountant/Viewer receive a restricted state, while role, remove, invite, and revoke controls are shown or disabled within Owner/Admin boundaries.
+- Login failures use a generic non-enumerating message. Confirmation callbacks and recovery errors are safe, local `next` paths remain enforced, and password reset uses the same 12-character complexity policy as Profile.
+- The live Auth check passed for Owner, Admin, Accountant, Viewer, invitation email/expiry/one-time rules, temporary role change and restoration, protected Storage, and unchanged business counts.
+- The current verification totals are Backend `pytest`: 96 passed; Frontend unit tests: 23 passed; Python compilation, TypeScript, and the Next.js production build: passed.
+
 ## Phase 8 delivery
 
 - Operations, environment, company/Owner bootstrap, invitation, role, report, attachment, RAG, Action Center, verification, and limitation guidance is consolidated in `docs/OPERATIONS_GUIDE.md`.

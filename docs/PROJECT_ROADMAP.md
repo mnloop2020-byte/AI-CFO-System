@@ -27,7 +27,7 @@ Build a bilingual AI CFO platform with live financial CRUD, reliable sourced ana
 - Real identity, role, name, HTTPS avatar, profile metadata, and password updates in Header/Profile.
 - Backend, TypeScript, production-build, role, invitation, RLS, and Storage checks.
 
-Status: **complete and integration-tested**. Settings/Profile/Auth live tests passed on 2026-07-23, including Bearer-token enforcement, sole-company context, role permissions, profile metadata, and password change/restore. MFA and advanced session controls remain Production blockers.
+Status: **complete and integration-tested**. Settings/Profile/Auth live tests passed on 2026-07-23, including Bearer-token enforcement, sole-company context, role permissions, profile metadata, password change/restore, secure invitation admission, permission-driven member controls, self-escalation prevention, Admin/Owner boundaries, and temporary role restoration. MFA and advanced session controls remain Production blockers.
 
 ## Phase 2: Complete prior functional integrations
 

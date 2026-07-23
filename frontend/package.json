@@ -10,7 +10,8 @@
     "test:chat": "node --test tests/chat-contract.test.ts",
     "test:company": "node --test tests/company-settings.test.ts",
     "test:profile": "node --test tests/profile-validation.test.ts",
-    "test": "npm run test:chat && npm run test:company && npm run test:profile"
+    "test:auth": "node --test tests/auth-access.test.ts",
+    "test": "npm run test:chat && npm run test:company && npm run test:profile && npm run test:auth"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

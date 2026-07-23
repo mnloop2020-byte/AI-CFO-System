@@ -93,6 +93,68 @@ def _get_auth_user_email(user_id: str) -> str:
     return str(user.email or "") if user else ""
 
 
+def _authorize_member_role_change(
+    *,
+    actor: RequestContext,
+    target_user_id: str,
+    current_role: CompanyRole,
+    requested_role: CompanyRole,
+) -> None:
+    """Apply member-management limits before the database safety trigger."""
+    if target_user_id == actor.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot change your own company role.",
+        )
+
+    if actor.company_role == "admin" and current_role == "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="An admin cannot modify an owner.",
+        )
+
+    if actor.company_role != "owner" and requested_role == "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only an owner can assign the owner role.",
+        )
+
+
+def _authorize_member_removal(
+    *,
+    actor: RequestContext,
+    target_user_id: str,
+    current_role: CompanyRole,
+) -> None:
+    """Prevent self-removal and owner removal by an administrator."""
+    if target_user_id == actor.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot remove your own company membership.",
+        )
+
+    if actor.company_role == "admin" and current_role == "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="An admin cannot remove an owner.",
+        )
+
+
+def _get_company_member(company_id: str, user_id: str) -> dict[str, object]:
+    response = (
+        get_supabase_client()
+        .table("company_members")
+        .select("user_id,role,created_at,updated_at")
+        .eq("company_id", company_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Company member not found.")
+    return response.data[0]
+
+
 @router.get("/me", response_model=AuthMeResponse)
 async def get_authenticated_user(
     context: RequestContext = Depends(require_authenticated_request),
@@ -142,6 +204,14 @@ async def update_company_member(
     payload: MemberRoleUpdate,
     context: RequestContext = Depends(require_permission("members.manage")),
 ) -> MemberResponse:
+    current_member = _get_company_member(context.company_id, user_id)
+    _authorize_member_role_change(
+        actor=context,
+        target_user_id=user_id,
+        current_role=str(current_member["role"]),
+        requested_role=payload.role,
+    )
+
     try:
         response = (
             get_supabase_client()
@@ -176,6 +246,13 @@ async def remove_company_member(
     user_id: str,
     context: RequestContext = Depends(require_permission("members.manage")),
 ) -> None:
+    current_member = _get_company_member(context.company_id, user_id)
+    _authorize_member_removal(
+        actor=context,
+        target_user_id=user_id,
+        current_role=str(current_member["role"]),
+    )
+
     try:
         response = (
             get_supabase_client()

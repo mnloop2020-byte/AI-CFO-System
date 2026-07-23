@@ -161,6 +161,8 @@ def main() -> None:
     admin_token = roles["admin"][1]
     accountant_client, accountant_token = roles["accountant"][0], roles["accountant"][1]
     viewer_client, viewer_token = roles["viewer"][0], roles["viewer"][1]
+    admin_identity = request(admin_token, "GET", "/auth/me").json()
+    viewer_identity = request(viewer_token, "GET", "/auth/me").json()
 
     assert request(viewer_token, "GET", "/customers").status_code == 200
     assert request(viewer_token, "POST", "/customers", json={}).status_code == 403
@@ -174,7 +176,39 @@ def main() -> None:
         f"/auth/members/{owner_identity['user_id']}",
         json={"role": "viewer"},
     )
-    assert protected_owner.status_code == 409
+    assert protected_owner.status_code == 403
+    assert request(
+        admin_token,
+        "PATCH",
+        f"/auth/members/{admin_identity['user_id']}",
+        json={"role": "owner"},
+    ).status_code == 403
+    assert request(
+        admin_token,
+        "DELETE",
+        f"/auth/members/{owner_identity['user_id']}",
+    ).status_code == 403
+
+    role_changed = False
+    try:
+        changed_role = request(
+            owner_token,
+            "PATCH",
+            f"/auth/members/{viewer_identity['user_id']}",
+            json={"role": "accountant"},
+        )
+        assert changed_role.status_code == 200, changed_role.text
+        role_changed = True
+        assert request(viewer_token, "GET", "/auth/me").json()["role"] == "accountant"
+    finally:
+        if role_changed:
+            restored_role = request(
+                owner_token,
+                "PATCH",
+                f"/auth/members/{viewer_identity['user_id']}",
+                json={"role": "viewer"},
+            )
+            assert restored_role.status_code == 200, restored_role.text
 
     try:
         owner_client.table("companies").insert(

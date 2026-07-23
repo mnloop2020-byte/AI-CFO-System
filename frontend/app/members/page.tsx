@@ -20,8 +20,13 @@ import {
   type CompanyRole,
   type InvitableRole,
 } from "@/lib/auth";
+import {
+  allowedMemberRoles,
+  canChangeMemberRole,
+  canRemoveMember,
+  hasAuthPermission,
+} from "@/lib/auth/access";
 
-const roleOptions: CompanyRole[] = ["owner", "admin", "accountant", "viewer"];
 const invitationRoleOptions: InvitableRole[] = ["admin", "accountant", "viewer"];
 
 export default function MembersPage() {
@@ -46,11 +51,16 @@ export default function MembersPage() {
     setErrorMessage(null);
     try {
       const identity = await getAuthMe();
+      setMe(identity);
+      if (!identity.permissions.includes("members.read")) {
+        setMembers([]);
+        setInvitations([]);
+        return;
+      }
       const [memberRows, invitationRows] = await Promise.all([
         getCompanyMembers(),
         getCompanyInvitations(),
       ]);
-      setMe(identity);
       setMembers(memberRows);
       setInvitations(invitationRows);
     } catch (error) {
@@ -63,6 +73,9 @@ export default function MembersPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const canReadMembers = hasAuthPermission(me, "members.read");
+  const canInviteMembers = hasAuthPermission(me, "members.invite");
 
   const handleInvite = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -145,6 +158,25 @@ export default function MembersPage() {
             </div>
           ) : null}
 
+          {!loading && me && !canReadMembers ? (
+            <section className="rounded-2xl border border-amber-100 bg-warning-soft p-6 text-text-secondary">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="mt-0.5 shrink-0 text-warning" size={20} />
+                <div>
+                  <h2 className="font-semibold text-text-primary">
+                    {isArabic ? "ليس لديك صلاحية إدارة الأعضاء" : "Member access is restricted"}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6">
+                    {isArabic
+                      ? "يمكن للمالك والمدير فقط عرض الأعضاء والدعوات وإدارتهم."
+                      : "Only owners and admins can view and manage members and invitations."}
+                  </p>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {canInviteMembers ? (
           <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
             <div className="flex items-center gap-3">
               <UserPlus className="text-primary" size={22} />
@@ -177,7 +209,9 @@ export default function MembersPage() {
               </div>
             ) : null}
           </section>
+          ) : null}
 
+          {canReadMembers ? (
           <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
             <div className="flex items-center gap-3 border-b border-border p-5">
               <Users className="text-primary" size={22} />
@@ -190,28 +224,31 @@ export default function MembersPage() {
                   <tbody>{members.map((member) => (
                     <tr key={member.user_id} className="border-t border-border">
                       <td className="px-5 py-4"><p className="font-medium text-text-primary" dir="ltr">{member.email}</p>{member.user_id === me?.user_id ? <span className="text-xs text-primary">{isArabic ? "أنت" : "You"}</span> : null}</td>
-                      <td className="px-5 py-4"><select value={member.role} onChange={(event) => void handleRoleChange(member, event.target.value as CompanyRole)} className="h-9 rounded-lg border border-border px-2">{roleOptions.map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}</select></td>
+                      <td className="px-5 py-4"><select value={member.role} disabled={!canChangeMemberRole(me, member)} onChange={(event) => void handleRoleChange(member, event.target.value as CompanyRole)} className="h-9 rounded-lg border border-border px-2 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70">{allowedMemberRoles(me, member).map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}</select></td>
                       <td className="px-5 py-4 text-sm text-text-secondary">{new Intl.DateTimeFormat(isArabic ? "ar-SA" : "en-US", { dateStyle: "medium" }).format(new Date(member.created_at))}</td>
-                      <td className="px-5 py-4"><button type="button" disabled={member.user_id === me?.user_id} onClick={() => void handleRemove(member)} className="rounded-lg border border-red-100 px-3 py-2 text-sm text-danger disabled:opacity-40">{isArabic ? "إزالة" : "Remove"}</button></td>
+                      <td className="px-5 py-4"><button type="button" disabled={!canRemoveMember(me, member)} onClick={() => void handleRemove(member)} className="rounded-lg border border-red-100 px-3 py-2 text-sm text-danger disabled:cursor-not-allowed disabled:opacity-40">{isArabic ? "إزالة" : "Remove"}</button></td>
                     </tr>
                   ))}</tbody>
                 </table>
               </div>
             )}
           </section>
+          ) : null}
 
+          {canReadMembers ? (
           <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
             <div className="border-b border-border p-5"><h2 className="font-semibold text-text-primary">{isArabic ? "سجل الدعوات" : "Invitation history"}</h2></div>
             <div className="divide-y divide-border">
               {invitations.map((invitation) => (
                 <div key={invitation.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div><p dir="ltr" className="font-medium text-text-primary">{invitation.email}</p><p className="mt-1 text-sm text-text-secondary">{roleLabel(invitation.role)} · {invitation.status}</p></div>
-                  {invitation.status === "pending" ? <button type="button" onClick={() => void handleRevoke(invitation)} className="rounded-lg border border-border px-3 py-2 text-sm text-text-secondary">{isArabic ? "إلغاء الدعوة" : "Revoke"}</button> : null}
+                  {invitation.status === "pending" && canInviteMembers ? <button type="button" onClick={() => void handleRevoke(invitation)} className="rounded-lg border border-border px-3 py-2 text-sm text-text-secondary">{isArabic ? "إلغاء الدعوة" : "Revoke"}</button> : null}
                 </div>
               ))}
               {!loading && invitations.length === 0 ? <p className="p-5 text-sm text-text-secondary">{isArabic ? "لا توجد دعوات بعد." : "No invitations yet."}</p> : null}
             </div>
           </section>
+          ) : null}
         </main>
       </div>
     </div>
