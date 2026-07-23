@@ -1,13 +1,35 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class InventoryCreate(BaseModel):
-    product_name: str
-    sku: str | None = None
-    quantity: int = 0
-    reorder_level: int = 5
-    cost_price: float = 0
-    selling_price: float = 0
+class InventoryInput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        allow_inf_nan=False,
+    )
+
+    @field_validator("sku", check_fields=False)
+    @classmethod
+    def normalize_sku(cls, value: str | None) -> str | None:
+        return value.upper() if value else None
+
+
+class InventoryCreate(InventoryInput):
+    product_name: str = Field(min_length=1, max_length=200)
+    sku: str | None = Field(default=None, max_length=100)
+    quantity: int = Field(default=0, ge=0, le=1_000_000_000)
+    reorder_level: int = Field(default=5, ge=0, le=1_000_000_000)
+    cost_price: float = Field(default=0, ge=0, le=1_000_000_000)
+    selling_price: float = Field(default=0, ge=0, le=1_000_000_000)
+
+
+class InventoryUpdate(InventoryInput):
+    product_name: str | None = Field(default=None, min_length=1, max_length=200)
+    sku: str | None = Field(default=None, max_length=100)
+    quantity: int | None = Field(default=None, ge=0, le=1_000_000_000)
+    reorder_level: int | None = Field(default=None, ge=0, le=1_000_000_000)
+    cost_price: float | None = Field(default=None, ge=0, le=1_000_000_000)
+    selling_price: float | None = Field(default=None, ge=0, le=1_000_000_000)
 
 
 class InventoryResponse(BaseModel):
@@ -21,16 +43,3 @@ class InventoryResponse(BaseModel):
     last_sold: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
-
-class InventoryUpdate(BaseModel):
-    product_name: str | None = None
-    sku: str | None = None
-    quantity: int | None = None
-    reorder_level: int | None = None
-    cost_price: float | None = None
-    selling_price: float | None = None
-
-
-
-
-# Note: This file defines the inventory request and response data shapes.

@@ -19,6 +19,7 @@ import {
 
 import SaleForm from "@/components/crm/SaleForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { usePermission } from "@/lib/auth/use-permission";
 import Modal from "@/components/ui/Modal";
 import { notifyDataChanged } from "@/lib/data-events";
 import {
@@ -112,6 +113,7 @@ function getStatusLabel(
 
 export default function SalesTable() {
   const { language } = useLanguage();
+  const canWrite = usePermission("financial.write");
   const isArabic = language === "ar";
   const numberLocale = isArabic
     ? "ar-SA"
@@ -415,7 +417,8 @@ export default function SalesTable() {
           <button
             type="button"
             onClick={openCreateSaleModal}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+            disabled={!canWrite}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={18} />
 
@@ -756,6 +759,7 @@ export default function SalesTable() {
                             )
                           }
                           disabled={
+                            !canWrite ||
                             deletingSaleId !==
                             null
                           }
@@ -782,6 +786,7 @@ export default function SalesTable() {
                             )
                           }
                           disabled={
+                            !canWrite ||
                             deletingSaleId !==
                             null
                           }

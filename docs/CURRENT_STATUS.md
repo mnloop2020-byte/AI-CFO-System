@@ -158,6 +158,16 @@ The next implementation order is:
 - The live Auth check passed for Owner, Admin, Accountant, Viewer, invitation email/expiry/one-time rules, temporary role change and restoration, protected Storage, and unchanged business counts.
 - The current verification totals are Backend `pytest`: 96 passed; Frontend unit tests: 23 passed; Python compilation, TypeScript, and the Next.js production build: passed.
 
+## Final CRM integration verification
+
+- Customers, Sales, Expenses, Inventory, and Invoices use the authenticated shared API client and RLS-scoped FastAPI stores. Write controls now derive from the centralized `financial.write` permission while Backend authorization remains authoritative.
+- Backend request schemas reject extra fields such as `company_id`, invalid email/phone/date/status values, negative or non-finite financial values, and client-supplied sale totals. Sale totals are recalculated by Backend.
+- Sale and expense dates are now persisted instead of being silently ignored. Invoice uploads no longer accept a client-supplied legacy `file_url`; private attachments remain the supported path.
+- Duplicate invoice numbers and inventory SKUs return conflict responses. Customer/record deletion conflicts return safe messages without cascading Sales or Invoices.
+- Invoice overdue display is derived in Backend from unpaid status and due date. Low stock remains `quantity <= reorder_level`.
+- Live create/read/update/delete checks passed for all five modules and removed only their temporary records. Counts were identical before and after: Customers 2, Sales 1, Expenses 3, Inventory 1, Invoices 1.
+- Latest totals: Backend `pytest` 105 passed, Frontend unit tests 27 passed, Python compilation, TypeScript, and production build passed.
+
 ## Phase 8 delivery
 
 - Operations, environment, company/Owner bootstrap, invitation, role, report, attachment, RAG, Action Center, verification, and limitation guidance is consolidated in `docs/OPERATIONS_GUIDE.md`.

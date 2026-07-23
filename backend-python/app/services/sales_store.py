@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from app.schemas.sales_schema import SaleCreate, SaleResponse , SaleUpdate 
 from app.services.supabase_client import get_supabase_client
+from app.services.store_errors import RecordNotFoundError
 
 
 def create_sale(sale: SaleCreate) -> SaleResponse:
@@ -83,7 +84,7 @@ def update_sale(
     )
 
     if not old_response.data:
-        raise ValueError("Sale not found")
+        raise RecordNotFoundError("Sale not found")
     # Stop if no sale was found with this ID.
 
     old_sale = old_response.data[0]
@@ -110,7 +111,7 @@ def update_sale(
     )
 
     if not response.data:
-        raise ValueError("Sale not found")
+        raise RecordNotFoundError("Sale not found")
     # Stop if update did not return a sale.
 
     row = response.data[0]
@@ -143,7 +144,7 @@ def delete_sale(sale_id: str) -> None:
     )
 
     if not response.data:
-        raise ValueError("Sale not found")
+        raise RecordNotFoundError("Sale not found")
     # Stop if no sale was found with this ID.
 
 

@@ -6,10 +6,31 @@ from app.schemas.inventory_schema import (
     InventoryUpdate,
 )
 from app.services.supabase_client import get_supabase_client
+from app.services.store_errors import (
+    RecordConflictError,
+    RecordNotFoundError,
+    is_constraint_error,
+)
+
+
+def _ensure_unique_sku(sku: str | None, *, excluding_id: str | None = None) -> None:
+    if not sku:
+        return
+    query = (
+        get_supabase_client()
+        .table("inventory")
+        .select("id")
+        .eq("sku", sku)
+    )
+    if excluding_id:
+        query = query.neq("id", excluding_id)
+    if query.limit(1).execute().data:
+        raise RecordConflictError("An inventory product with this SKU already exists.")
 
 
 def create_inventory_item(item: InventoryCreate) -> InventoryResponse:
     supabase = get_supabase_client()
+    _ensure_unique_sku(item.sku)
 
     response = (
         supabase
@@ -71,6 +92,8 @@ def update_inventory_item(
     item: InventoryUpdate,
 ) -> InventoryResponse:
     supabase = get_supabase_client()
+    if item.sku is not None:
+        _ensure_unique_sku(item.sku, excluding_id=item_id)
 
     update_data = item.model_dump(exclude_none=True)
     # Keep only the fields the user wants to update.
@@ -87,7 +110,7 @@ def update_inventory_item(
     )
 
     if not response.data:
-        raise ValueError("Inventory item not found")
+        raise RecordNotFoundError("Inventory item not found")
     # Stop if no item was found with this ID.
 
     row = response.data[0]
@@ -111,16 +134,23 @@ def update_inventory_item(
 def delete_inventory_item(item_id: str) -> None:
     supabase = get_supabase_client()
 
-    response = (
-        supabase
-        .table("inventory")
-        .delete()
-        .eq("id", item_id)
-        .execute()
-    )
+    try:
+        response = (
+            supabase
+            .table("inventory")
+            .delete()
+            .eq("id", item_id)
+            .execute()
+        )
+    except Exception as error:
+        if is_constraint_error(error, "23503"):
+            raise RecordConflictError(
+                "Inventory product is linked to another record and cannot be deleted."
+            ) from error
+        raise
 
     if not response.data:
-        raise ValueError("Inventory item not found")
+        raise RecordNotFoundError("Inventory item not found")
     # Stop if no inventory item was found with this ID.
 
 

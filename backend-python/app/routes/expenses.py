@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from app.security.authentication import require_permission
 from app.security.request_context import RequestContext
 from app.schemas.expenses_schema import ExpenseCreate, ExpenseResponse, ExpenseUpdate
+from app.services.store_errors import RecordNotFoundError
 from app.services.expenses_store import (
     create_expense,
     delete_expense,
@@ -46,7 +47,7 @@ def edit_expense(
         return updated_expense
         # Update one expense and return it.
 
-    except ValueError:
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Expense not found",
@@ -67,7 +68,7 @@ def remove_expense(
         }
         # Delete one expense and return a success message.
 
-    except ValueError:
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Expense not found",

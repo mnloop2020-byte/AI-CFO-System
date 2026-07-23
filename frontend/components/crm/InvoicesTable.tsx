@@ -20,6 +20,7 @@ import {
 
 import InvoiceForm from "@/components/crm/InvoiceForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { usePermission } from "@/lib/auth/use-permission";
 import Modal from "@/components/ui/Modal";
 import { uploadAttachment } from "@/lib/attachments";
 import { notifyDataChanged } from "@/lib/data-events";
@@ -140,6 +141,7 @@ function getStatusDetails(
 
 export default function InvoicesTable() {
   const { language } = useLanguage();
+  const canWrite = usePermission("financial.write");
   const isArabic = language === "ar";
   const numberLocale = isArabic
     ? "ar-SA"
@@ -476,7 +478,8 @@ export default function InvoicesTable() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            disabled={!canWrite}
+            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={18} />
 
@@ -839,7 +842,7 @@ export default function InvoicesTable() {
                                   invoice,
                                 )
                               }
-                              disabled={deleting}
+                              disabled={!canWrite || deleting}
                               aria-label={
                                 isArabic
                                   ? `تعديل ${invoice.invoice_number}`
@@ -864,7 +867,7 @@ export default function InvoicesTable() {
                                   invoice,
                                 )
                               }
-                              disabled={deleting}
+                              disabled={!canWrite || deleting}
                               aria-label={
                                 isArabic
                                   ? `حذف ${invoice.invoice_number}`

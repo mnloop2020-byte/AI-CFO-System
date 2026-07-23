@@ -22,6 +22,7 @@ import {
 
 import CustomerForm from "@/components/crm/CustomerForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { usePermission } from "@/lib/auth/use-permission";
 import Modal from "@/components/ui/Modal";
 import {
   createCustomer,
@@ -75,6 +76,7 @@ function formatDate(
 
 export default function CustomersTable() {
   const { language } = useLanguage();
+  const canWrite = usePermission("financial.write");
 
   const [customers, setCustomers] =
     useState<Customer[]>([]);
@@ -361,7 +363,8 @@ export default function CustomersTable() {
             onClick={
               openCreateCustomerModal
             }
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+            disabled={!canWrite}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={18} />
 
@@ -656,6 +659,7 @@ export default function CustomersTable() {
                               )
                             }
                             disabled={
+                              !canWrite ||
                               deletingCustomerId !==
                               null
                             }
@@ -684,6 +688,7 @@ export default function CustomersTable() {
                               )
                             }
                             disabled={
+                              !canWrite ||
                               deletingCustomerId !==
                               null
                             }

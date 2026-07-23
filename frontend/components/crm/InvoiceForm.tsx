@@ -237,7 +237,6 @@ export default function InvoiceForm({
             `${dueDate}T00:00:00.000Z`,
           ).toISOString()
         : null,
-      file_url: initialInvoice?.file_url ?? null,
     }, selectedFile ?? undefined);
   }
 

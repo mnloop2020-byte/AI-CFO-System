@@ -4,6 +4,7 @@ from app.security.authentication import require_permission
 from app.security.request_context import RequestContext
 from app.schemas.sales_schema import SaleCreate, SaleResponse, SaleUpdate  
 from app.services.sales_store import create_sale, get_sales , update_sale , delete_sale
+from app.services.store_errors import RecordNotFoundError
 
 router = APIRouter(prefix="/sales", tags=["Sales"])
 
@@ -43,7 +44,7 @@ def edit_sale(
         return updated_sale
         # Update one sale and return it.
 
-    except ValueError:
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Sale not found",
@@ -64,7 +65,7 @@ def remove_sale(
         }
         # Delete one sale and return a success message.
 
-    except ValueError:
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Sale not found",

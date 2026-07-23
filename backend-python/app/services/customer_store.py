@@ -6,6 +6,11 @@ from app.schemas.customer_schema import (
     CustomerUpdate,
 )
 from app.services.supabase_client import get_supabase_client
+from app.services.store_errors import (
+    RecordConflictError,
+    RecordNotFoundError,
+    is_constraint_error,
+)
 
 
 def create_customer(customer: CustomerCreate) -> CustomerResponse:
@@ -81,7 +86,7 @@ def update_customer(
     )
 
     if not response.data:
-        raise ValueError("Customer not found")
+        raise RecordNotFoundError("Customer not found")
     # Stop if no customer was found with this ID.
 
     row = response.data[0]
@@ -101,16 +106,23 @@ def update_customer(
 def delete_customer(customer_id: str) -> None:
     supabase = get_supabase_client()
 
-    response = (
-        supabase
-        .table("customers")
-        .delete()
-        .eq("id", customer_id)
-        .execute()
-    )
+    try:
+        response = (
+            supabase
+            .table("customers")
+            .delete()
+            .eq("id", customer_id)
+            .execute()
+        )
+    except Exception as error:
+        if is_constraint_error(error, "23503"):
+            raise RecordConflictError(
+                "Customer is linked to sales or invoices and cannot be deleted."
+            ) from error
+        raise
 
     if not response.data:
-        raise ValueError("Customer not found")
+        raise RecordNotFoundError("Customer not found")
     # Stop if no customer was found with this ID.
 
 

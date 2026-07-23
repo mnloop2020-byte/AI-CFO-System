@@ -10,6 +10,7 @@ from app.services.invoices_store import (
     update_invoice,
     InvoiceUpdate 
 )
+from app.services.store_errors import RecordConflictError, RecordNotFoundError
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 
@@ -18,7 +19,10 @@ def add_invoice(
     invoice: InvoiceCreate,
     _: RequestContext = Depends(require_permission("financial.write")),
 ):
-    new_invoice = create_invoice(invoice)
+    try:
+        new_invoice = create_invoice(invoice)
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
     return new_invoice
     # Create a new invoice and return it.
@@ -51,7 +55,9 @@ def edit_invoice(
         return updated_invoice
         # Update one invoice and return it.
 
-    except ValueError:
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RecordNotFoundError:
         raise HTTPException (
             status_code=404,
             detail="Invoice not found",
@@ -72,7 +78,9 @@ def remove_invoice(
         }
         # Delete one invoice and return a success message.
 
-    except ValueError:
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Invoice not found",

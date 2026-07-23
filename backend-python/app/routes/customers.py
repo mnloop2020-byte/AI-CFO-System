@@ -14,6 +14,7 @@ from app.services.customer_store import (
 )
 from app.security.authentication import require_permission
 from app.security.request_context import RequestContext
+from app.services.store_errors import RecordConflictError, RecordNotFoundError
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
@@ -54,7 +55,9 @@ def edit_customer(
         return updated_customer
         # Update one customer and return it.
 
-    except ValueError:
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Customer not found",
@@ -74,7 +77,9 @@ def remove_customer(
         }
         # Delete one customer and return a success message.
 
-    except ValueError:
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Customer not found",

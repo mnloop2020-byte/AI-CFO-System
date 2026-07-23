@@ -20,6 +20,7 @@ import {
 
 import InventoryForm from "@/components/crm/InventoryForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { usePermission } from "@/lib/auth/use-permission";
 import Modal from "@/components/ui/Modal";
 import { notifyDataChanged } from "@/lib/data-events";
 import {
@@ -157,6 +158,7 @@ function getQuantityProgress(item: InventoryItem) {
 
 export default function InventoryTable() {
   const { language } = useLanguage();
+  const canWrite = usePermission("financial.write");
   const isArabic = language === "ar";
   const numberLocale = isArabic
     ? "ar-SA"
@@ -443,7 +445,8 @@ export default function InventoryTable() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            disabled={!canWrite}
+            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={18} />
 
@@ -770,7 +773,7 @@ export default function InventoryTable() {
                             onClick={() =>
                               openEditModal(item)
                             }
-                            disabled={deleting}
+                            disabled={!canWrite || deleting}
                             aria-label={
                               isArabic
                                 ? `تعديل ${item.product_name}`
@@ -793,7 +796,7 @@ export default function InventoryTable() {
                                 item,
                               )
                             }
-                            disabled={deleting}
+                            disabled={!canWrite || deleting}
                             aria-label={
                               isArabic
                                 ? `حذف ${item.product_name}`

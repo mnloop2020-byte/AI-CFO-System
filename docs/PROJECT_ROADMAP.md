@@ -42,6 +42,8 @@ Execute and test each item in this order:
 
 Status: **complete**. Company Settings, persisted private PDF reports, private financial attachments, immediate KPI refresh, and deterministic agent grounding are implemented and tested.
 
+CRM integration status: **complete and re-verified**. The five live modules enforce centralized read/write permissions, validated request contracts, server-calculated Sales totals, backend-derived overdue/low-stock states, safe relationship conflicts, duplicate Invoice/SKU checks, and temporary live CRUD with unchanged permanent counts.
+
 ## Phase 3: AI Financial Action Center
 
 - Deterministic Python detection rules with AI used for explanation, never invented numbers.

@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from app.schemas.expenses_schema import ExpenseCreate, ExpenseResponse ,ExpenseUpdate
 from app.services.supabase_client import get_supabase_client
+from app.services.store_errors import RecordNotFoundError
 
 
 def create_expense(expense: ExpenseCreate) -> ExpenseResponse:
@@ -80,7 +81,7 @@ def update_expense(
     )
 
     if not response.data:
-        raise ValueError("Expense not found")
+        raise RecordNotFoundError("Expense not found")
     # Stop if no expense was found with this ID.
 
     row = response.data[0]
@@ -110,7 +111,7 @@ def delete_expense(expense_id: str) -> None:
     )
 
     if not response.data:
-        raise ValueError("Expense not found")
+        raise RecordNotFoundError("Expense not found")
     # Stop if no expense was found with this ID.
 
 

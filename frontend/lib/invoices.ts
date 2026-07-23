@@ -20,7 +20,6 @@ export type CreateInvoiceInput = {
   vat_amount: number;
   status: string;
   due_date?: string | null;
-  file_url?: string | null;
 };
 // the information which is used for sending the invoice to the customer, but not stored in the database
 

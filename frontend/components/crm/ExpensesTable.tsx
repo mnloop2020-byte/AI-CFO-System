@@ -20,6 +20,7 @@ import {
 
 import ExpenseForm from "@/components/crm/ExpenseForm";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { usePermission } from "@/lib/auth/use-permission";
 import Modal from "@/components/ui/Modal";
 import { uploadAttachment } from "@/lib/attachments";
 import { notifyDataChanged } from "@/lib/data-events";
@@ -81,6 +82,7 @@ function getExpenseCode(expenseId: string) {
 
 export default function ExpensesTable() {
   const { language } = useLanguage();
+  const canWrite = usePermission("financial.write");
   const isArabic = language === "ar";
   const numberLocale = isArabic
     ? "ar-SA"
@@ -402,7 +404,8 @@ export default function ExpensesTable() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            disabled={!canWrite}
+            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={18} />
 
@@ -716,6 +719,7 @@ export default function ExpensesTable() {
                                 )
                               }
                               disabled={
+                                !canWrite ||
                                 deleting
                               }
                               aria-label={
@@ -743,6 +747,7 @@ export default function ExpensesTable() {
                                 )
                               }
                               disabled={
+                                !canWrite ||
                                 deleting
                               }
                               aria-label={

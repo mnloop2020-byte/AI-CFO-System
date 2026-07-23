@@ -13,6 +13,7 @@ from app.services.inventory_store import (
     update_inventory_item,
     delete_inventory_item,
 )
+from app.services.store_errors import RecordConflictError, RecordNotFoundError
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
 
 
@@ -21,7 +22,10 @@ def add_inventory_item(
     item: InventoryCreate,
     _: RequestContext = Depends(require_permission("financial.write")),
 ):
-    new_item = create_inventory_item(item)
+    try:
+        new_item = create_inventory_item(item)
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
     return new_item
     # Create a new inventory item and return it.
@@ -51,7 +55,9 @@ def edit_inventory_item(
         return updated_item
         # Update one inventory item and return it.
 
-    except ValueError:
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Inventory item not found",
@@ -72,7 +78,9 @@ def remove_inventory_item(
         }
         # Delete one inventory item and return a success message.
 
-    except ValueError:
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Inventory item not found",
