@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.action_schema import FinancialActionUpdate
+from app.schemas.company_schema import FinancialSettings
 from app.schemas.customer_schema import CustomerResponse
 from app.schemas.expenses_schema import ExpenseResponse
 from app.schemas.inventory_schema import InventoryResponse
@@ -35,11 +36,11 @@ def _inventory(quantity: int = 3) -> InventoryResponse:
     )
 
 
-def _expense(flagged: bool = True) -> ExpenseResponse:
+def _expense(flagged: bool = True, amount: float = 500) -> ExpenseResponse:
     return ExpenseResponse(
         id="40000000-0000-0000-0000-000000000001",
         category="Consulting",
-        amount=500,
+        amount=amount,
         vendor=None,
         is_flagged=flagged,
     )
@@ -150,3 +151,45 @@ def test_action_update_cannot_enable_external_execution() -> None:
         FinancialActionUpdate.model_validate(
             {"proposed_action": {"external_execution_allowed": True}}
         )
+
+
+def test_custom_invoice_thresholds_control_deterministic_severity() -> None:
+    settings = FinancialSettings(
+        invoice_high_priority_days=90,
+        invoice_critical_days=120,
+        high_amount_threshold=20_000,
+        critical_amount_threshold=100_000,
+    )
+
+    candidates = detect_action_candidates(
+        [_invoice(due_date="2026-01-01")],
+        [],
+        [],
+        [_customer()],
+        today=date(2026, 3, 5),
+        currency="USD",
+        financial_settings=settings,
+    )
+
+    assert candidates[0].payload["severity"] == "medium"
+
+
+def test_large_expense_threshold_creates_review_without_fraud_claim() -> None:
+    settings = FinancialSettings(large_expense_review_threshold=400)
+    candidates = detect_action_candidates(
+        [],
+        [],
+        [_expense(flagged=False, amount=500)],
+        [],
+        today=date(2026, 3, 5),
+        currency="USD",
+        financial_settings=settings,
+    )
+
+    assert len(candidates) == 1
+    evidence = candidates[0].payload["evidence"]
+    assert evidence["is_flagged"] is False
+    assert evidence["large_amount_rule_matched"] is True
+    assert evidence["large_expense_review_threshold"] == 400
+    assert evidence["fraud_confirmed"] is False
+    assert evidence["review_triggers"] == ["configured_amount_threshold"]

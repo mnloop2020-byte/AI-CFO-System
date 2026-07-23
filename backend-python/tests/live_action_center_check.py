@@ -46,6 +46,10 @@ def main() -> None:
     role_password = f"ActionCenter!{secrets.token_urlsafe(18)}Aa1"
     role_headers: dict[str, dict[str, str]] = {}
     role_user_ids: dict[str, str] = {}
+    auth_users_by_id = {
+        str(user.id): user
+        for user in service_client.auth.admin.list_users()
+    }
     for role in ("admin", "accountant", "viewer"):
         members = (
             service_client.table("company_members")
@@ -58,7 +62,7 @@ def main() -> None:
         )
         role_user = None
         for member in members:
-            candidate = service_client.auth.admin.get_user_by_id(member["user_id"]).user
+            candidate = auth_users_by_id.get(str(member["user_id"]))
             if candidate and (candidate.email or "").startswith(f"phase1-{role}-"):
                 role_user = candidate
                 break
@@ -81,6 +85,12 @@ def main() -> None:
     unauthenticated = client.get("/actions")
     assert unauthenticated.status_code == 401
 
+    accountant_detection = client.post(
+        "/actions/detect",
+        headers=role_headers["accountant"],
+    )
+    assert accountant_detection.status_code == 200, accountant_detection.text
+
     first_detection = client.post("/actions/detect", headers=headers)
     assert first_detection.status_code == 200, first_detection.text
     first_result = first_detection.json()
@@ -93,7 +103,7 @@ def main() -> None:
     actions_response = client.get("/actions", headers=headers)
     assert actions_response.status_code == 200, actions_response.text
     actions = actions_response.json()
-    assert len(actions) >= 2
+    assert len(actions) == 3
     assert second_result["existing"] >= 2
 
     audited_update = client.patch(
@@ -122,7 +132,6 @@ def main() -> None:
         ).status_code
         == 403
     )
-    assert client.post("/actions/detect", headers=role_headers["accountant"]).status_code == 200
     assert (
         client.post(
             f"/actions/{actions[0]['id']}/assign",
@@ -148,6 +157,7 @@ def main() -> None:
         ),
         None,
     )
+    live_approval_execution_tested = False
     if approval_action and approval_action["status"] == "new":
         review = client.post(
             f"/actions/{approval_action['id']}/transition",
@@ -205,6 +215,7 @@ def main() -> None:
             )
             assert replayed_execution.status_code == 200, replayed_execution.text
             assert replayed_execution.json()["replayed"] is True
+            live_approval_execution_tested = True
 
     detail = client.get(f"/actions/{actions[0]['id']}", headers=headers)
     assert detail.status_code == 200, detail.text
@@ -245,9 +256,16 @@ def main() -> None:
             "company_id_rejected": smuggled_company.status_code,
             "viewer_read_only": True,
             "accountant_cannot_assign_or_approve": True,
-            "admin_can_assign_and_approve": True,
+            "accountant_detection_allowed": True,
+            "live_approval_execution_tested": live_approval_execution_tested,
+            "approval_rejection_and_execution_route_tests": (
+                "covered by tests/test_action_routes.py when no live action "
+                "is waiting for approval"
+            ),
             "external_execution_disabled": True,
-            "execution_idempotency": True,
+            "execution_idempotency": (
+                True if live_approval_execution_tested else "covered by route test"
+            ),
             "expense_policy_context_available": expense_detail["evidence"][
                 "policy_match_available"
             ],

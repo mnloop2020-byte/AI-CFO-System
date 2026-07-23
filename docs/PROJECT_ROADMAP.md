@@ -1,6 +1,6 @@
 # AI CFO System Roadmap
 
-Last updated: 2026-07-22
+Last updated: 2026-07-23
 
 ## Product direction
 
@@ -24,10 +24,10 @@ Build a bilingual AI CFO platform with live financial CRUD, reliable sourced ana
 - Member and invitation management for Owner/Admin.
 - Real password reset and protected Auth callbacks without open redirects.
 - RLS for company data and private Storage role policies.
-- Real identity and role in Header/Profile.
+- Real identity, role, name, HTTPS avatar, profile metadata, and password updates in Header/Profile.
 - Backend, TypeScript, production-build, role, invitation, RLS, and Storage checks.
 
-Status: **complete**. MFA is intentionally deferred to the later security-hardening stage. Rate limiting, CAPTCHA, expanded audit logs, and advanced session controls also remain later hardening work.
+Status: **complete and integration-tested**. Settings/Profile/Auth live tests passed on 2026-07-23, including Bearer-token enforcement, sole-company context, role permissions, profile metadata, and password change/restore. MFA and advanced session controls remain Production blockers.
 
 ## Phase 2: Complete prior functional integrations
 

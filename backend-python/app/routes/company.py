@@ -35,6 +35,11 @@ def save_company_settings(
 ) -> CompanySettingsResponse:
     try:
         return update_company_settings(payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
     except LookupError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     except Exception as error:
@@ -43,4 +48,3 @@ def save_company_settings(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Company settings could not be saved.",
         ) from error
-

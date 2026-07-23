@@ -3,6 +3,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import {
   Building2,
+  BellRing,
   CheckCircle2,
   CircleAlert,
   Landmark,
@@ -18,15 +19,19 @@ import {
   getCompanySettings,
   updateCompanySettings,
   type CompanySettings,
+  type CompanySettingsEditable,
   type CompanySettingsUpdate,
+  type FinancialSettings,
 } from "@/lib/company";
+import { validateFinancialSettings } from "@/lib/company-settings-validation";
 
 const inputClasses =
   "h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text-primary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary-soft disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-text-secondary";
 
-const emptySettings: CompanySettingsUpdate = {
+const emptySettings: CompanySettingsEditable = {
   name: "",
   legal_name: null,
+  business_activity: null,
   email: null,
   phone: null,
   address: null,
@@ -42,10 +47,17 @@ const emptySettings: CompanySettingsUpdate = {
   bank_name: null,
   opening_balance: null,
   balance_date: null,
-  financial_settings: {},
+  financial_settings: {
+    invoice_high_priority_days: 30,
+    invoice_critical_days: 60,
+    high_amount_threshold: 10_000,
+    critical_amount_threshold: 50_000,
+    cash_reserve_threshold: 75_000,
+    large_expense_review_threshold: 15_000,
+  },
 };
 
-function editableSettings(settings: CompanySettings): CompanySettingsUpdate {
+function editableSettings(settings: CompanySettings): CompanySettingsEditable {
   const { id: _id, created_at: _createdAt, updated_at: _updatedAt, ...editable } =
     settings;
   return editable;
@@ -59,7 +71,7 @@ function nullable(value: string) {
 export default function CompanySettingsForm() {
   const { language } = useLanguage();
   const isArabic = language === "ar";
-  const [settings, setSettings] = useState<CompanySettingsUpdate>(emptySettings);
+  const [settings, setSettings] = useState<CompanySettingsEditable>(emptySettings);
   const [canEdit, setCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -94,18 +106,54 @@ export default function CompanySettingsForm() {
     void loadSettings();
   }, [loadSettings]);
 
-  const setText = (field: keyof CompanySettingsUpdate, value: string) => {
+  const setText = (field: keyof CompanySettingsEditable, value: string) => {
     setSettings((current) => ({ ...current, [field]: nullable(value) }));
+  };
+
+  const setFinancialSetting = (
+    field: keyof FinancialSettings,
+    value: number,
+  ) => {
+    setSettings((current) => ({
+      ...current,
+      financial_settings: {
+        ...current.financial_settings,
+        [field]: value,
+      },
+    }));
   };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canEdit) return;
+    const validationCode = validateFinancialSettings(
+      settings.financial_settings,
+    );
+    if (validationCode) {
+      const messages = {
+        invalid_days: isArabic
+          ? "يجب أن تكون حدود أيام الفواتير أعدادًا صحيحة أكبر من صفر."
+          : "Invoice day thresholds must be positive whole numbers.",
+        invalid_amount: isArabic
+          ? "يجب أن تكون الحدود المالية أرقامًا صحيحة غير سالبة."
+          : "Financial thresholds must be finite, non-negative numbers.",
+        invalid_day_order: isArabic
+          ? "يجب أن تتجاوز أيام الحالة الحرجة أيام الأولوية العالية."
+          : "Critical invoice days must exceed high-priority invoice days.",
+        invalid_amount_order: isArabic
+          ? "يجب أن يتجاوز حد المبلغ الحرج حد المبلغ العالي."
+          : "The critical amount threshold must exceed the high threshold.",
+      };
+      setSaveError(messages[validationCode]);
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     setSuccessMessage(null);
     try {
-      const updated = await updateCompanySettings(settings);
+      const updated = await updateCompanySettings(
+        settings satisfies CompanySettingsUpdate,
+      );
       setSettings(editableSettings(updated));
       setSuccessMessage(
         isArabic
@@ -199,6 +247,21 @@ export default function CompanySettingsForm() {
           <Field label={isArabic ? "الاسم القانوني" : "Legal name"}>
             <input disabled={!canEdit || saving} value={settings.legal_name ?? ""} onChange={(event) => setText("legal_name", event.target.value)} className={inputClasses} />
           </Field>
+          <Field label={isArabic ? "النشاط التجاري" : "Business activity"} wide>
+            <textarea
+              rows={3}
+              maxLength={500}
+              disabled={!canEdit || saving}
+              value={settings.business_activity ?? ""}
+              onChange={(event) => setText("business_activity", event.target.value)}
+              placeholder={
+                isArabic
+                  ? "صف بإيجاز نشاط الشركة والمنتجات أو الخدمات الرئيسية."
+                  : "Briefly describe the company and its main products or services."
+              }
+              className="w-full resize-none rounded-xl border border-border bg-surface px-3.5 py-3 text-sm text-text-primary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary-soft disabled:cursor-not-allowed disabled:bg-surface-soft"
+            />
+          </Field>
           <Field label={isArabic ? "البريد التجاري" : "Business email"}>
             <input type="email" dir="ltr" disabled={!canEdit || saving} value={settings.email ?? ""} onChange={(event) => setText("email", event.target.value)} className={inputClasses} />
           </Field>
@@ -263,6 +326,79 @@ export default function CompanySettingsForm() {
 
       <section className="rounded-2xl border border-border bg-surface shadow-sm">
         <header className="flex items-start gap-3 border-b border-border p-5">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <BellRing size={21} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-text-primary">
+              {isArabic ? "حدود التنبيهات المالية" : "Financial alert thresholds"}
+            </h2>
+            <p className="mt-1 text-sm text-text-secondary">
+              {isArabic
+                ? "قواعد حتمية لتحديد أولوية الفواتير ومراجعة المصروفات."
+                : "Deterministic rules for invoice priority and expense review."}
+            </p>
+          </div>
+        </header>
+        <div className="grid gap-5 p-5 sm:grid-cols-2">
+          <NumberField
+            label={isArabic ? "أيام الأولوية العالية للفواتير" : "High-priority invoice days"}
+            value={settings.financial_settings.invoice_high_priority_days}
+            disabled={!canEdit || saving}
+            min={1}
+            step={1}
+            onChange={(value) => setFinancialSetting("invoice_high_priority_days", value)}
+          />
+          <NumberField
+            label={isArabic ? "أيام الحالة الحرجة للفواتير" : "Critical invoice days"}
+            value={settings.financial_settings.invoice_critical_days}
+            disabled={!canEdit || saving}
+            min={1}
+            step={1}
+            onChange={(value) => setFinancialSetting("invoice_critical_days", value)}
+          />
+          <NumberField
+            label={isArabic ? "حد المبلغ عالي الأولوية" : "High amount threshold"}
+            value={settings.financial_settings.high_amount_threshold}
+            disabled={!canEdit || saving}
+            min={0}
+            step={0.01}
+            onChange={(value) => setFinancialSetting("high_amount_threshold", value)}
+          />
+          <NumberField
+            label={isArabic ? "حد المبلغ الحرج" : "Critical amount threshold"}
+            value={settings.financial_settings.critical_amount_threshold}
+            disabled={!canEdit || saving}
+            min={0}
+            step={0.01}
+            onChange={(value) => setFinancialSetting("critical_amount_threshold", value)}
+          />
+          <NumberField
+            label={isArabic ? "حد الاحتياطي النقدي" : "Cash reserve threshold"}
+            value={settings.financial_settings.cash_reserve_threshold}
+            disabled={!canEdit || saving}
+            min={0}
+            step={0.01}
+            onChange={(value) => setFinancialSetting("cash_reserve_threshold", value)}
+          />
+          <NumberField
+            label={isArabic ? "حد مراجعة المصروف الكبير" : "Large-expense review threshold"}
+            value={settings.financial_settings.large_expense_review_threshold}
+            disabled={!canEdit || saving}
+            min={0}
+            step={0.01}
+            onChange={(value) => setFinancialSetting("large_expense_review_threshold", value)}
+          />
+          <p className="rounded-xl border border-amber-100 bg-warning-soft px-4 py-3 text-sm leading-6 text-text-secondary sm:col-span-2">
+            {isArabic
+              ? "حد الاحتياطي النقدي محفوظ للتجهيز المستقبلي فقط؛ لن يُقيّم النظام الاحتياطي حتى يتوفر رصيد بنكي موثوق من دفتر مالي أو حسابات بنكية."
+              : "The cash-reserve threshold is stored for future use only. It is not evaluated until a trusted bank balance is available from a ledger or bank accounts."}
+          </p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface shadow-sm">
+        <header className="flex items-start gap-3 border-b border-border p-5">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success"><Landmark size={21} /></div>
           <div>
             <h2 className="font-semibold text-text-primary">{isArabic ? "الرصيد الافتتاحي" : "Opening balance"}</h2>
@@ -300,5 +436,37 @@ function Field({ label, wide = false, children }: { label: string; wide?: boolea
       <span className="text-sm font-medium text-text-primary">{label}</span>
       {children}
     </label>
+  );
+}
+
+function NumberField({
+  label,
+  value,
+  disabled,
+  min,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  disabled: boolean;
+  min: number;
+  step: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <Field label={label}>
+      <input
+        type="number"
+        inputMode="decimal"
+        dir="ltr"
+        value={Number.isFinite(value) ? value : ""}
+        disabled={disabled}
+        min={min}
+        step={step}
+        onChange={(event) => onChange(event.currentTarget.valueAsNumber)}
+        className={inputClasses}
+      />
+    </Field>
   );
 }

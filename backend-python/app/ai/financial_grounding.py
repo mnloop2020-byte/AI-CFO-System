@@ -125,10 +125,14 @@ def enrich_financial_data(metrics: dict[str, Any]) -> dict[str, Any]:
     sources.append(
         {
             "table": "companies",
-            "record_ids": [company.id],
+            "record_ids": ["single_company_context"],
             "fields": [
+                "name",
+                "business_activity",
                 "currency",
-                "tax_jurisdiction",
+                "timezone",
+                "fiscal_year_start",
+                "tax_jurisdiction_configured",
                 "vat_registered",
             ],
         }
@@ -137,9 +141,14 @@ def enrich_financial_data(metrics: dict[str, Any]) -> dict[str, Any]:
     return {
         **enriched_metrics,
         "company_context": {
+            "company_name": company.name,
+            "business_activity": company.business_activity,
             "currency": company.currency,
-            "tax_jurisdiction": company.tax_jurisdiction,
+            "timezone": company.timezone,
+            "fiscal_year_start": company.fiscal_year_start,
+            "tax_jurisdiction_configured": bool(company.tax_jurisdiction),
             "vat_registered": company.vat_registered,
+            "is_bank_balance_available": False,
             "bank_balance_available": False,
             "complete_liabilities_available": False,
             "forecast_available": False,

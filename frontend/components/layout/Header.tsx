@@ -22,6 +22,7 @@ import {
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { getAuthMe, type CompanyRole } from "@/lib/auth";
+import { normalizeAvatarUrl } from "@/lib/profile-validation";
 import { createClient } from "@/lib/supabase/client";
 
 type HeaderProps = {
@@ -97,6 +98,7 @@ export default function Header({
 
   const [accountName, setAccountName] = useState("User");
   const [accountRole, setAccountRole] = useState<CompanyRole | null>(null);
+  const [accountAvatarUrl, setAccountAvatarUrl] = useState<string | null>(null);
 
   const notificationsRef =
     useRef<HTMLDivElement | null>(null);
@@ -152,9 +154,43 @@ export default function Header({
             ? fullName.trim()
             : identity.email.split("@")[0] || "User",
         );
+        try {
+          const avatarUrl = data.user?.user_metadata?.avatar_url;
+          setAccountAvatarUrl(
+            typeof avatarUrl === "string" ? normalizeAvatarUrl(avatarUrl) : null,
+          );
+        } catch {
+          setAccountAvatarUrl(null);
+        }
         setAccountRole(identity.role);
       })
       .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    function handleProfileUpdated(event: Event) {
+      const detail = (event as CustomEvent<{
+        fullName?: unknown;
+        avatarUrl?: unknown;
+      }>).detail;
+      if (typeof detail?.fullName === "string" && detail.fullName.trim()) {
+        setAccountName(detail.fullName.trim());
+      }
+      try {
+        setAccountAvatarUrl(
+          typeof detail?.avatarUrl === "string"
+            ? normalizeAvatarUrl(detail.avatarUrl)
+            : null,
+        );
+      } catch {
+        setAccountAvatarUrl(null);
+      }
+    }
+
+    window.addEventListener("profile-updated", handleProfileUpdated);
+    return () => {
+      window.removeEventListener("profile-updated", handleProfileUpdated);
+    };
   }, []);
 
   async function signOut() {
@@ -425,8 +461,18 @@ export default function Header({
             aria-label={t("openAccountMenu")}
             className="flex items-center gap-2 rounded-xl border border-border bg-surface px-1.5 py-1.5 transition-colors hover:bg-surface-soft sm:gap-3 sm:px-2"
           >
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold text-primary">
-              {accountName.slice(0, 1).toUpperCase()}
+            <span className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-primary-soft text-sm font-semibold text-primary">
+              {accountAvatarUrl ? (
+                // User metadata is restricted to an HTTPS URL before rendering.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={accountAvatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                accountName.slice(0, 1).toUpperCase()
+              )}
             </span>
 
             <span className="hidden text-start md:block">

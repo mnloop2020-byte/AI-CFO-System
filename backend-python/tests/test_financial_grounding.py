@@ -1,4 +1,7 @@
+from types import SimpleNamespace
+
 from app.ai.financial_grounding import (
+    enrich_financial_data,
     find_unsupported_claims,
     find_unsupported_numbers,
     ground_financial_reply,
@@ -285,3 +288,58 @@ def test_deterministic_financial_tools_preserve_distinct_concepts() -> None:
     assert tax["net_vat_payable_available"] is False
     assert review["fraud_confirmed"] is False
     assert review["flagged_expenses_count"] == 1
+
+
+def test_company_context_exposes_only_approved_non_sensitive_fields(
+    monkeypatch,
+) -> None:
+    company = SimpleNamespace(
+        id="company-secret-id",
+        name="Demo Company",
+        business_activity="Wholesale trading",
+        currency="USD",
+        timezone="Europe/Istanbul",
+        fiscal_year_start=1,
+        tax_jurisdiction="Sensitive jurisdiction value",
+        vat_registered=True,
+        tax_id="SECRET-TAX-ID",
+        bank_name="SECRET BANK",
+        opening_balance=999_999,
+        balance_date="2026-01-01",
+        email="secret@example.com",
+        phone="+1000000000",
+        address="Secret address",
+    )
+    monkeypatch.setattr(
+        "app.services.company_store.get_company_settings",
+        lambda: company,
+    )
+
+    enriched = enrich_financial_data({"tax_jurisdiction_configured": False})
+    context = enriched["company_context"]
+
+    assert context == {
+        "company_name": "Demo Company",
+        "business_activity": "Wholesale trading",
+        "currency": "USD",
+        "timezone": "Europe/Istanbul",
+        "fiscal_year_start": 1,
+        "tax_jurisdiction_configured": True,
+        "vat_registered": True,
+        "is_bank_balance_available": False,
+        "bank_balance_available": False,
+        "complete_liabilities_available": False,
+        "forecast_available": False,
+    }
+    serialized = str(enriched)
+    for secret in (
+        "company-secret-id",
+        "Sensitive jurisdiction value",
+        "SECRET-TAX-ID",
+        "SECRET BANK",
+        "999999",
+        "secret@example.com",
+        "+1000000000",
+        "Secret address",
+    ):
+        assert secret not in serialized

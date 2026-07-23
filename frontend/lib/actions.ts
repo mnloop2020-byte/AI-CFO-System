@@ -84,6 +84,8 @@ export type DetectionResult = {
   existing: number;
   resolved: number;
   action_ids: string[];
+  cash_reserve_evaluated: false;
+  cash_reserve_evaluation_reason: "bank_balance_unavailable";
 };
 
 export function getFinancialActions() {

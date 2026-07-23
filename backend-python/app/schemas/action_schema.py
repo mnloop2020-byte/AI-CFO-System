@@ -123,6 +123,10 @@ class DetectionResult(BaseModel):
     existing: int
     resolved: int
     action_ids: list[UUID]
+    cash_reserve_evaluated: bool = False
+    cash_reserve_evaluation_reason: Literal["bank_balance_unavailable"] = (
+        "bank_balance_unavailable"
+    )
 
 
 class ActionExecutionRequest(BaseModel):

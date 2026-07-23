@@ -186,8 +186,8 @@ export default function FinancialActionCenter() {
       await refreshAfterMutation();
       setNotice(
         isArabic
-          ? `تم إنشاء ${result.created}، وتجنب ${result.existing} إجراء مكرر، وإغلاق ${result.resolved} إجراء محلول.`
-          : `Created ${result.created}, reused ${result.existing} existing, and resolved ${result.resolved} action(s).`,
+          ? `تم إنشاء ${result.created}، وتجنب ${result.existing} إجراء مكرر، وإغلاق ${result.resolved} إجراء محلول. لم يُقيّم الاحتياطي النقدي لعدم توفر رصيد بنكي موثوق.`
+          : `Created ${result.created}, reused ${result.existing} existing, and resolved ${result.resolved} action(s). Cash reserve was not evaluated because no trusted bank balance is available.`,
       );
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Detection failed.");

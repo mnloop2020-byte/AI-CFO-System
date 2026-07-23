@@ -112,6 +112,10 @@ def main() -> None:
     test_password = f"Phase1!{secrets.token_urlsafe(18)}Aa1"
     roles: dict[str, tuple[object, str, dict[str, object], str]] = {}
     raw_tokens: list[str] = []
+    auth_users_by_id = {
+        str(user.id): user
+        for user in service_client.auth.admin.list_users()
+    }
 
     for role in ("admin", "accountant", "viewer"):
         existing_members = (
@@ -125,7 +129,7 @@ def main() -> None:
         )
         existing_user = None
         for member in existing_members:
-            candidate = service_client.auth.admin.get_user_by_id(member["user_id"]).user
+            candidate = auth_users_by_id.get(str(member["user_id"]))
             if candidate and (candidate.email or "").startswith(f"phase1-{role}-"):
                 existing_user = candidate
                 break

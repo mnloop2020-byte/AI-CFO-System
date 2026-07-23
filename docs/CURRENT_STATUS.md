@@ -1,6 +1,6 @@
 # AI CFO System Current Status
 
-Last updated: 2026-07-22
+Last updated: 2026-07-23
 
 ## Completed localization
 
@@ -11,8 +11,8 @@ Last updated: 2026-07-22
 - Inventory page, table, and form; TypeScript, route compilation, HTTP response, and live API calculations were verified.
 - Invoices page, table, and form; TypeScript, route compilation, HTTP response, and live API values were verified.
 - Reports page, templates, generation dialog, real report history, and protected PDF downloads are localized and connected.
-- Settings page and company-settings form; TypeScript and the running route were verified. The UI remains a clearly labelled design preview until backend company settings are implemented.
-- Profile and Security now displays the authenticated Supabase user, company, and database-backed role. The user's display name can be updated in Auth metadata. MFA and advanced session management remain explicitly deferred.
+- Settings page and company-settings form load and update the real company through the Bearer-protected FastAPI API, with Owner/Admin edits and Accountant/Viewer read-only access.
+- Profile and Security displays the authenticated Supabase user, company, and database-backed role. The user can update their name, phone, HTTPS avatar URL, preferred language, and password through Supabase Auth. MFA and advanced session management remain explicitly deferred.
 - Authentication UI now provides real login/logout, invitation-only registration, email confirmation callback handling, password recovery, and password update in English/Arabic with protected redirects.
 - Shared modal accessibility labels and unique dialog title/description IDs were localized.
 - Previously missed Chat and Customers page headers were localized.
@@ -134,11 +134,21 @@ The next implementation order is:
 
 ## Phase 7 verification
 
-- **The final Pilot verification suite passes.** Backend `pytest`: 44 passed; Python compilation: passed; TypeScript `tsc --noEmit`: passed; Next.js production compilation completed and generated Build ID `aSIGKyDH3YLmsNwWlNYRz`.
+- **The final Pilot verification suite passes.** The latest integration run reports Backend `pytest`: 91 passed; Python compilation: passed; Frontend unit tests: 16 passed; TypeScript `tsc --noEmit`: passed; and the Next.js production build generated all 22 application routes successfully.
 - Live Phase 1 checks passed again for Owner, Admin, Accountant, Viewer, last-Owner protection, invitation email/expiry/one-time rules, and private Storage roles.
 - Live Action Center checks passed for unauthenticated `401`, fake `company_id` rejection, Viewer read-only, Accountant detection/write boundary, Admin assignment/approval, audit events, deduplication, idempotent non-execution, RAG policy citation, and conservative value metrics.
 - Browser verification passed in English and Arabic. The document language/direction switched between `en/ltr` and `ar/rtl`; a 390×844 viewport had no horizontal overflow; the protected Action URL redirected to login without a session.
 - Live response headers include CSP, `DENY` framing, `nosniff`, and strict-origin referrer policy. The authenticated Action UI was verified through API role/lifecycle tests and production compilation; the browser session intentionally did not expose or type credentials.
+
+## Settings, Profile, Auth, and Action integration verification
+
+- Live Settings tests passed for reading and temporarily updating the name, business activity, currency, VAT status, and fiscal-year start, followed by restoring the original company values.
+- Invalid currency, fiscal month, financial-threshold ordering, and frontend-supplied `company_id` payloads returned `422`. Viewer could read Settings and received `403` on update.
+- `/auth/me` returned the authenticated user, sole company, database membership role, and centralized permissions. Missing and invalid Bearer tokens returned `401`.
+- Supabase Auth profile metadata accepted a temporary name and HTTPS avatar, and a real password change/sign-in/restore cycle passed without printing credentials or tokens.
+- The bilingual Profile UI now rejects unsafe avatar schemes and weak passwords before submission, and immediately refreshes Header identity/avatar state after a successful profile save.
+- The live Action Center returned exactly three current actions, repeated detection created no duplicate, Viewer remained read-only, Accountant could detect but not assign/approve, fake `company_id` was rejected, and action/security audit events remained available.
+- Because the only approval-required live action was already `in_progress`, approval, rejection, and execution replay were verified through isolated route tests without forcing or rewriting the live action state.
 
 ## Phase 8 delivery
 

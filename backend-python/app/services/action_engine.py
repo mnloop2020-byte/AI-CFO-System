@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from app.schemas.action_schema import DetectionResult
+from app.schemas.company_schema import FinancialSettings
 from app.schemas.customer_schema import CustomerResponse
 from app.schemas.expenses_schema import ExpenseResponse
 from app.schemas.inventory_schema import InventoryResponse
@@ -42,10 +43,20 @@ def _parse_date(value: str | None) -> date | None:
             return None
 
 
-def _overdue_severity(days_overdue: int, amount: float) -> str:
-    if days_overdue >= 60 or amount >= 50_000:
+def _overdue_severity(
+    days_overdue: int,
+    amount: float,
+    settings: FinancialSettings,
+) -> str:
+    if (
+        days_overdue >= settings.invoice_critical_days
+        or amount >= settings.critical_amount_threshold
+    ):
         return "critical"
-    if days_overdue >= 30 or amount >= 10_000:
+    if (
+        days_overdue >= settings.invoice_high_priority_days
+        or amount >= settings.high_amount_threshold
+    ):
         return "high"
     if days_overdue >= 7:
         return "medium"
@@ -60,10 +71,12 @@ def detect_action_candidates(
     *,
     today: date,
     currency: str | None,
+    financial_settings: FinancialSettings | None = None,
     expense_policy_matches: dict[str, dict[str, Any]] | None = None,
 ) -> list[ActionCandidate]:
     candidates: list[ActionCandidate] = []
     customer_map = {customer.id: customer for customer in customers}
+    settings = financial_settings or FinancialSettings()
 
     for invoice in invoices:
         due_date = _parse_date(invoice.due_date)
@@ -91,7 +104,11 @@ def detect_action_candidates(
                         f"الفاتورة {invoice.invoice_number} متأخرة {days_overdue} يومًا "
                         f"وبمبلغ مستحق {invoice.total_amount:.2f}."
                     ),
-                    "severity": _overdue_severity(days_overdue, invoice.total_amount),
+                    "severity": _overdue_severity(
+                        days_overdue,
+                        invoice.total_amount,
+                        settings,
+                    ),
                     "financial_impact": invoice.total_amount,
                     "currency": currency,
                     "source_type": "invoice",
@@ -187,7 +204,10 @@ def detect_action_candidates(
         )
 
     for expense in expenses:
-        if not expense.is_flagged:
+        exceeds_review_threshold = (
+            expense.amount >= settings.large_expense_review_threshold
+        )
+        if not expense.is_flagged and not exceeds_review_threshold:
             continue
         policy_match = (expense_policy_matches or {}).get(expense.id)
         policy_evidence = (
@@ -211,15 +231,15 @@ def detect_action_candidates(
                 payload={
                     "action_type": "expense_review",
                     "dedup_key": f"expense_review:{expense.id}",
-                    "title_en": f"Review flagged {expense.category} expense",
-                    "title_ar": f"مراجعة مصروف معلّم ضمن {expense.category}",
+                    "title_en": f"Review {expense.category} expense",
+                    "title_ar": f"مراجعة مصروف ضمن {expense.category}",
                     "description_en": (
-                        "This expense is flagged for human review. The flag does not "
-                        "confirm fraud or misconduct."
+                        "This expense meets a configured review rule and requires human "
+                        "review. The alert does not confirm fraud or misconduct."
                     ),
                     "description_ar": (
-                        "هذا المصروف معلّم للمراجعة البشرية، ولا يعني ذلك إثبات "
-                        "احتيال أو مخالفة."
+                        "يستوفي هذا المصروف قاعدة مراجعة مهيأة ويحتاج إلى مراجعة "
+                        "بشرية. لا يعني التنبيه إثبات احتيال أو مخالفة."
                     ),
                     "severity": "medium",
                     "financial_impact": expense.amount,
@@ -231,7 +251,19 @@ def detect_action_candidates(
                         "amount": expense.amount,
                         "vendor": expense.vendor,
                         "expense_date": expense.expense_date,
-                        "is_flagged": True,
+                        "is_flagged": expense.is_flagged,
+                        "large_amount_rule_matched": exceeds_review_threshold,
+                        "large_expense_review_threshold": (
+                            settings.large_expense_review_threshold
+                        ),
+                        "review_triggers": [
+                            trigger
+                            for trigger, matched in (
+                                ("source_record_flag", expense.is_flagged),
+                                ("configured_amount_threshold", exceeds_review_threshold),
+                            )
+                            if matched
+                        ],
                         "flag_reason_available": False,
                         "fraud_confirmed": False,
                         "policy_match": policy_evidence,
@@ -258,12 +290,16 @@ def detect_action_candidates(
 
 def _load_expense_policy_matches(
     expenses: list[ExpenseResponse],
+    large_expense_review_threshold: float,
 ) -> dict[str, dict[str, Any]]:
     """Retrieve policy context as untrusted evidence, never executable instructions."""
 
     matches: dict[str, dict[str, Any]] = {}
     for expense in expenses:
-        if not expense.is_flagged:
+        if (
+            not expense.is_flagged
+            and expense.amount < large_expense_review_threshold
+        ):
             continue
         query_parts = [
             "company expense policy approval receipt vendor business purpose",
@@ -289,7 +325,11 @@ def _source_is_resolved(action: Any, source_map: dict[str, dict[str, Any]]) -> b
     if action.source_type == "inventory":
         return int(source["quantity"]) > int(source["reorder_level"])
     if action.source_type == "expense":
-        return not bool(source["is_flagged"])
+        return (
+            not bool(source["is_flagged"])
+            and float(source["amount"])
+            < float(source["large_expense_review_threshold"])
+        )
     return False
 
 
@@ -307,7 +347,11 @@ def run_action_detection(today: date | None = None) -> DetectionResult:
         customers,
         today=today,
         currency=company.currency,
-        expense_policy_matches=_load_expense_policy_matches(expenses),
+        financial_settings=company.financial_settings,
+        expense_policy_matches=_load_expense_policy_matches(
+            expenses,
+            company.financial_settings.large_expense_review_threshold,
+        ),
     )
 
     created_ids = []
@@ -372,7 +416,13 @@ def run_action_detection(today: date | None = None) -> DetectionResult:
             for item in inventory
         },
         **{
-            f"expense:{expense.id}": {"is_flagged": expense.is_flagged}
+            f"expense:{expense.id}": {
+                "is_flagged": expense.is_flagged,
+                "amount": expense.amount,
+                "large_expense_review_threshold": (
+                    company.financial_settings.large_expense_review_threshold
+                ),
+            }
             for expense in expenses
         },
     }
@@ -410,4 +460,6 @@ def run_action_detection(today: date | None = None) -> DetectionResult:
         existing=existing,
         resolved=resolved,
         action_ids=created_ids,
+        cash_reserve_evaluated=False,
+        cash_reserve_evaluation_reason="bank_balance_unavailable",
     )
