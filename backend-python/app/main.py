@@ -14,6 +14,7 @@ from app.routes.expenses import router as expenses_router
 from app.routes.health import router as health_router
 from app.routes.inventory import router as inventory_router
 from app.routes.invoices import router as invoices_router
+from app.routes.notifications import router as notifications_router
 from app.routes.rag import router as rag_router
 from app.routes.reports import router as reports_router
 from app.routes.sales import router as sales_router
@@ -68,6 +69,7 @@ app.include_router(sales_router, dependencies=protected_dependencies)
 app.include_router(expenses_router, dependencies=protected_dependencies)
 app.include_router(inventory_router, dependencies=protected_dependencies)
 app.include_router(invoices_router, dependencies=protected_dependencies)
+app.include_router(notifications_router, dependencies=protected_dependencies)
 
 
 # This file connects all route files to the FastAPI app.

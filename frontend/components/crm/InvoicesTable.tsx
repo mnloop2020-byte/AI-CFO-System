@@ -3,7 +3,10 @@
 import {
   CheckCircle2,
   CircleAlert,
+  Download,
   FileText,
+  LoaderCircle,
+  Mail,
   Paperclip,
   Pencil,
   Plus,
@@ -30,8 +33,10 @@ import {
 } from "@/lib/customers";
 import {
   createInvoice,
+  createInvoicePdfDownload,
   deleteInvoice,
   getInvoices,
+  sendInvoiceEmail,
   updateInvoice,
   type CreateInvoiceInput,
   type Invoice,
@@ -141,6 +146,7 @@ function getStatusDetails(
 
 export default function InvoicesTable() {
   const { language } = useLanguage();
+  const canRead = usePermission("financial.read");
   const canWrite = usePermission("financial.write");
   const isArabic = language === "ar";
   const numberLocale = isArabic
@@ -181,6 +187,12 @@ export default function InvoicesTable() {
     deletingInvoiceId,
     setDeletingInvoiceId,
   ] = useState<string | null>(null);
+
+  const [downloadingInvoiceId, setDownloadingInvoiceId] =
+    useState<string | null>(null);
+
+  const [emailingInvoiceId, setEmailingInvoiceId] =
+    useState<string | null>(null);
 
   const [actionError, setActionError] =
     useState<string | null>(null);
@@ -440,6 +452,92 @@ export default function InvoicesTable() {
       setActionError(message);
     } finally {
       setDeletingInvoiceId(null);
+    }
+  }
+
+  async function handleDownloadInvoice(
+    invoice: Invoice,
+  ) {
+    if (downloadingInvoiceId) {
+      return;
+    }
+    setDownloadingInvoiceId(invoice.id);
+    setActionError(null);
+    setSuccessMessage(null);
+
+    try {
+      const download = await createInvoicePdfDownload(
+        invoice.id,
+        language,
+      );
+      const response = await fetch(download.url, {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("The generated PDF could not be downloaded.");
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = download.file_name.replace(
+        /[^A-Za-z0-9._-]/g,
+        "-",
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+      setSuccessMessage(
+        isArabic
+          ? "تم تنزيل ملف الفاتورة بصيغة PDF."
+          : "The invoice PDF was downloaded.",
+      );
+    } catch {
+      setActionError(
+        isArabic
+          ? "تعذر إنشاء ملف الفاتورة أو تنزيله. حاول مرة أخرى."
+          : "The invoice PDF could not be generated or downloaded. Try again.",
+      );
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  }
+
+  async function handleEmailInvoice(
+    invoice: Invoice,
+  ) {
+    if (emailingInvoiceId) {
+      return;
+    }
+    const confirmed = window.confirm(
+      isArabic
+        ? `هل تريد إرسال الفاتورة ${invoice.invoice_number} إلى بريد العميل المسجل؟`
+        : `Send invoice ${invoice.invoice_number} to the customer's registered email?`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setEmailingInvoiceId(invoice.id);
+    setActionError(null);
+    setSuccessMessage(null);
+    try {
+      await sendInvoiceEmail(invoice.id, language);
+      setSuccessMessage(
+        isArabic
+          ? "تم إرسال الفاتورة إلى بريد العميل المسجل."
+          : "The invoice was sent to the customer's registered email.",
+      );
+    } catch {
+      setActionError(
+        isArabic
+          ? "تعذر إرسال الفاتورة. تحقق من بريد العميل وإعداد خدمة البريد."
+          : "The invoice could not be sent. Check the customer email and server email configuration.",
+      );
+    } finally {
+      setEmailingInvoiceId(null);
     }
   }
 
@@ -805,36 +903,81 @@ export default function InvoicesTable() {
                         </td>
 
                         <td className="px-5 py-4">
-                          {invoice.file_url ? (
-                            <a
-                              href={invoice.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                            >
-                              <Paperclip
-                                size={16}
-                              />
+                          <span className="inline-flex items-center gap-2 text-sm text-text-secondary">
+                            <Paperclip size={16} />
 
-                              {isArabic
-                                ? "فتح المستند"
-                                : "Open document"}
-                            </a>
-                          ) : (
-                            <span className="inline-flex items-center gap-2 text-sm text-text-secondary">
-                              <Paperclip
-                                size={16}
-                              />
-
-                              {isArabic
-                                ? "لم يُرفع"
-                                : "Not uploaded"}
-                            </span>
-                          )}
+                            {isArabic
+                              ? "PDF آمن عند الطلب"
+                              : "Secure PDF on demand"}
+                          </span>
                         </td>
 
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleDownloadInvoice(invoice)
+                              }
+                              disabled={
+                                !canRead ||
+                                downloadingInvoiceId !== null ||
+                                emailingInvoiceId !== null
+                              }
+                              aria-label={
+                                isArabic
+                                  ? `تنزيل ${invoice.invoice_number}`
+                                  : `Download ${invoice.invoice_number}`
+                              }
+                              title={
+                                isArabic
+                                  ? "تنزيل PDF"
+                                  : "Download PDF"
+                              }
+                              className="flex size-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-primary-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {downloadingInvoiceId === invoice.id ? (
+                                <LoaderCircle
+                                  size={17}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Download size={17} />
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleEmailInvoice(invoice)
+                              }
+                              disabled={
+                                !canWrite ||
+                                emailingInvoiceId !== null ||
+                                downloadingInvoiceId !== null
+                              }
+                              aria-label={
+                                isArabic
+                                  ? `إرسال ${invoice.invoice_number} بالبريد`
+                                  : `Email ${invoice.invoice_number}`
+                              }
+                              title={
+                                isArabic
+                                  ? "إرسال إلى بريد العميل"
+                                  : "Email customer"
+                              }
+                              className="flex size-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-success-soft hover:text-success disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {emailingInvoiceId === invoice.id ? (
+                                <LoaderCircle
+                                  size={17}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <Mail size={17} />
+                              )}
+                            </button>
+
                             <button
                               type="button"
                               onClick={() =>

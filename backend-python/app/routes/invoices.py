@@ -1,8 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.security.authentication import require_permission
 from app.security.request_context import RequestContext
-from app.schemas.invoices_schema import InvoiceCreate, InvoiceResponse
+from app.schemas.invoices_schema import (
+    InvoiceCreate,
+    InvoiceEmailRequest,
+    InvoiceEmailResult,
+    InvoicePdfDownload,
+    InvoicePdfRequest,
+    InvoiceResponse,
+)
+from app.services.email_service import (
+    EmailDeliveryError,
+    EmailNotConfiguredError,
+)
+from app.services.invoice_delivery_service import (
+    create_invoice_pdf_download,
+    send_invoice_email,
+)
 from app.services.invoices_store import (
     create_invoice,
     delete_invoice,
@@ -10,7 +28,11 @@ from app.services.invoices_store import (
     update_invoice,
     InvoiceUpdate 
 )
+from app.services.notification_store import create_paid_notification
 from app.services.store_errors import RecordConflictError, RecordNotFoundError
+
+
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 
@@ -51,6 +73,15 @@ def edit_invoice(
             invoice_id=invoice_id,
             invoice=invoice,
         )
+        if updated_invoice.status == "paid":
+            try:
+                create_paid_notification(
+                    invoice_id=updated_invoice.id,
+                    invoice_number=updated_invoice.invoice_number,
+                    revision=updated_invoice.updated_at or updated_invoice.id,
+                )
+            except Exception:
+                logger.exception("Unable to create an invoice-paid notification.")
 
         return updated_invoice
         # Update one invoice and return it.
@@ -63,6 +94,90 @@ def edit_invoice(
             detail="Invoice not found",
         )
         # Return 404 if the invoice ID does not exist.
+
+
+@router.post(
+    "/{invoice_id}/pdf/download",
+    response_model=InvoicePdfDownload,
+)
+def download_invoice_pdf(
+    invoice_id: UUID,
+    request: InvoicePdfRequest,
+    _: RequestContext = Depends(require_permission("financial.read")),
+) -> InvoicePdfDownload:
+    try:
+        return create_invoice_pdf_download(
+            invoice_id,
+            language=request.language,
+        )
+    except RecordNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not found",
+        ) from error
+    except RecordConflictError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except Exception as error:
+        logger.exception("Unable to prepare an invoice PDF download.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Invoice PDF download is unavailable.",
+        ) from error
+
+
+@router.post(
+    "/{invoice_id}/email",
+    response_model=InvoiceEmailResult,
+)
+def email_invoice(
+    invoice_id: UUID,
+    request: InvoiceEmailRequest,
+    _: RequestContext = Depends(require_permission("financial.write")),
+) -> InvoiceEmailResult:
+    try:
+        send_invoice_email(
+            invoice_id,
+            language=request.language,
+        )
+        return InvoiceEmailResult(
+            status="sent",
+            message="Invoice email sent successfully.",
+        )
+    except RecordNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not found",
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+    except RecordConflictError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except EmailNotConfiguredError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(error),
+        ) from error
+    except EmailDeliveryError as error:
+        logger.warning("Invoice email delivery failed.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The email provider could not deliver the invoice.",
+        ) from error
+    except Exception as error:
+        logger.exception("Unexpected invoice email delivery failure.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Invoice email delivery is unavailable.",
+        ) from error
 
 @router.delete("/{invoice_id}")
 def remove_invoice(

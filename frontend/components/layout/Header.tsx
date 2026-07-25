@@ -1,26 +1,21 @@
 "use client";
 
 import {
-  Bell,
-  CheckCheck,
   ChevronRight,
-  Clock3,
   Languages,
   LogOut,
   Menu,
-  Package,
   Search,
-  ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
-  useRef,
   useState,
 } from "react";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import NotificationsMenu from "@/components/layout/NotificationsMenu";
 import { getAuthMe, type CompanyRole } from "@/lib/auth";
 import { normalizeAvatarUrl } from "@/lib/profile-validation";
 import { createClient } from "@/lib/supabase/client";
@@ -90,59 +85,9 @@ export default function Header({
     t,
   } = useLanguage();
 
-  const [notificationsOpen, setNotificationsOpen] =
-    useState(false);
-
-  const [notificationsRead, setNotificationsRead] =
-    useState(false);
-
   const [accountName, setAccountName] = useState("User");
   const [accountRole, setAccountRole] = useState<CompanyRole | null>(null);
   const [accountAvatarUrl, setAccountAvatarUrl] = useState<string | null>(null);
-
-  const notificationsRef =
-    useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    function handleOutsideClick(event: MouseEvent) {
-      if (
-        notificationsRef.current &&
-        !notificationsRef.current.contains(
-          event.target as Node,
-        )
-      ) {
-        setNotificationsOpen(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setNotificationsOpen(false);
-      }
-    }
-
-    document.addEventListener(
-      "mousedown",
-      handleOutsideClick,
-    );
-
-    window.addEventListener(
-      "keydown",
-      handleEscape,
-    );
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleOutsideClick,
-      );
-
-      window.removeEventListener(
-        "keydown",
-        handleEscape,
-      );
-    };
-  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -212,61 +157,6 @@ export default function Header({
     language === "ar"
       ? arabicDescriptions[title] ?? description
       : description;
-
-  const notifications =
-    language === "ar"
-      ? [
-          {
-            title: "مصروف يحتاج إلى مراجعة",
-            description:
-              "يوجد مصروف بقيمة 500.00 بانتظار المراجعة البشرية.",
-            icon: ShieldAlert,
-            iconStyle:
-              "bg-danger-soft text-danger",
-          },
-          {
-            title: "انخفاض مستوى المخزون",
-            description:
-              "يوجد منتج أقل من مستوى إعادة الطلب المحدد.",
-            icon: Package,
-            iconStyle:
-              "bg-warning-soft text-warning",
-          },
-          {
-            title: "فاتورة غير مدفوعة",
-            description:
-              "لا تزال فاتورة بقيمة 1,000.00 غير مدفوعة.",
-            icon: Clock3,
-            iconStyle:
-              "bg-primary-soft text-primary",
-          },
-        ]
-      : [
-          {
-            title: "Flagged expense requires review",
-            description:
-              "An expense of 500.00 is waiting for human review.",
-            icon: ShieldAlert,
-            iconStyle:
-              "bg-danger-soft text-danger",
-          },
-          {
-            title: "Low inventory level",
-            description:
-              "One product is below its configured reorder level.",
-            icon: Package,
-            iconStyle:
-              "bg-warning-soft text-warning",
-          },
-          {
-            title: "Unpaid invoice",
-            description:
-              "An expected inflow of 1,000.00 remains unpaid.",
-            icon: Clock3,
-            iconStyle:
-              "bg-primary-soft text-primary",
-          },
-        ];
 
   const displayedRole = accountRole
     ? language === "ar"
@@ -354,107 +244,7 @@ export default function Header({
             </span>
           </button>
 
-          <div
-            ref={notificationsRef}
-            className="relative"
-          >
-            <button
-              type="button"
-              onClick={() =>
-                setNotificationsOpen(
-                  (currentValue) => !currentValue,
-                )
-              }
-              aria-label={t("openNotifications")}
-              aria-expanded={notificationsOpen}
-              className="relative flex size-10 items-center justify-center rounded-xl border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-soft hover:text-text-primary"
-            >
-              <Bell size={19} />
-
-              {!notificationsRead ? (
-                <span className="absolute right-2 top-2 size-2 rounded-full border-2 border-white bg-danger" />
-              ) : null}
-            </button>
-
-            {notificationsOpen ? (
-              <div className="absolute end-0 top-full z-50 mt-3 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
-                <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-4">
-                  <div>
-                    <p className="font-semibold text-text-primary">
-                      {language === "ar"
-                        ? "الإشعارات"
-                        : "Notifications"}
-                    </p>
-
-                    <p className="mt-0.5 text-xs text-text-secondary">
-                      {notificationsRead
-                        ? language === "ar"
-                          ? "تمت قراءة جميع الإشعارات"
-                          : "All notifications are read"
-                        : language === "ar"
-                          ? "3 عناصر تحتاج إلى الانتباه"
-                          : "3 items require attention"}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setNotificationsRead(true)
-                    }
-                    className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary-hover"
-                  >
-                    <CheckCheck size={16} />
-
-                    {language === "ar"
-                      ? "تحديد الكل كمقروء"
-                      : "Mark all read"}
-                  </button>
-                </div>
-
-                <div>
-                  {notifications.map(
-                    (notification) => {
-                      const Icon = notification.icon;
-
-                      return (
-                        <button
-                          key={notification.title}
-                          type="button"
-                          className="flex w-full items-start gap-3 border-b border-border px-4 py-4 text-start transition-colors last:border-b-0 hover:bg-surface-soft"
-                        >
-                          <span
-                            className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${notification.iconStyle}`}
-                          >
-                            <Icon
-                              size={19}
-                              strokeWidth={1.8}
-                            />
-                          </span>
-
-                          <span>
-                            <span className="block text-sm font-medium text-text-primary">
-                              {notification.title}
-                            </span>
-
-                            <span className="mt-1 block text-xs leading-5 text-text-secondary">
-                              {notification.description}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    },
-                  )}
-                </div>
-
-                <div className="bg-surface-soft px-4 py-3 text-center text-xs text-text-secondary">
-                  {language === "ar"
-                    ? "تعتمد الإشعارات على البيانات المالية الحالية."
-                    : "Notifications are based on the current financial data."}
-                </div>
-              </div>
-            ) : null}
-          </div>
+          <NotificationsMenu />
 
           <Link
             href="/profile"

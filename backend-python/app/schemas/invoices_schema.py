@@ -65,3 +65,27 @@ class InvoiceResponse(BaseModel):
     file_url: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
+
+
+class InvoicePdfRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    language: Literal["en", "ar"] = "en"
+
+
+class InvoicePdfDownload(BaseModel):
+    url: str
+    file_name: str
+    expires_at: datetime
+    generated: bool
+
+
+class InvoiceEmailRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    language: Literal["en", "ar"] = "en"
+
+
+class InvoiceEmailResult(BaseModel):
+    status: Literal["sent"]
+    message: str

@@ -36,5 +36,17 @@ RAG_MAX_FILE_SIZE_BYTES = int(
 )
 RAG_MAX_CONTEXT_CHARS = int(os.getenv("RAG_MAX_CONTEXT_CHARS", "6000"))
 
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL")
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
+SMTP_TIMEOUT_SECONDS = float(os.getenv("SMTP_TIMEOUT_SECONDS", "10"))
 
-# Note: This file loads OpenRouter, Supabase, and RAG settings from backend-python/.env.
+
+# Note: This file loads backend service settings without exposing their values.

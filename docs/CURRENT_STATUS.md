@@ -1,6 +1,6 @@
 # AI CFO System Current Status
 
-Last updated: 2026-07-23
+Last updated: 2026-07-25
 
 ## Completed localization
 
@@ -167,6 +167,19 @@ The next implementation order is:
 - Invoice overdue display is derived in Backend from unpaid status and due date. Low stock remains `quantity <= reorder_level`.
 - Live create/read/update/delete checks passed for all five modules and removed only their temporary records. Counts were identical before and after: Customers 2, Sales 1, Expenses 3, Inventory 1, Invoices 1.
 - Latest totals: Backend `pytest` 105 passed, Frontend unit tests 27 passed, Python compilation, TypeScript, and production build passed.
+
+## Invoice PDF delivery and notifications
+
+- Migration `20260723120000_add_invoice_delivery_notifications.sql` (committed-file SHA-256 `86BD42E70CB695B8EE019FAF56F6446C0564A25B8AB6D978E0F54207F08E22B2`) was applied once to `tjadermimgzncdvfjpra`. It added company-scoped, RLS-protected invoice-delivery events and invoice notifications with deterministic deduplication and security-audit triggers.
+- The migration ran inside a transaction, required exactly one company, and verified unchanged protected row counts. Existing Customers 2, Sales 1, Expenses 3, Inventory 1, Invoices 1, Conversations 31, Messages 146, Reports 1, Documents 4, Document Chunks 4, Financial Actions 3, and Financial Action Events 16 were preserved.
+- FastAPI generates real English or Arabic invoice PDFs from the RLS-scoped invoice, customer, and company records. PDFs use embedded DejaVu fonts, RTL shaping, safe file names, deterministic content, and the configured company currency.
+- Generated PDFs are stored beneath the trusted company/invoice path in the existing private `financial-attachments` bucket. Metadata remains in `financial_attachments`, and downloads use short-lived signed URLs; the frontend never supplies a Storage path or `company_id`.
+- Owner/Admin/Accountant can generate and send invoice PDFs. Viewer remains read-only and may download only an already-generated current PDF. All controls are also permission-gated in the bilingual Invoice UI.
+- Email delivery uses an SMTP provider abstraction, the customer email stored in the database, a five-minute idempotency window, and immutable success/failure events. No SMTP service is configured in the current environment, so the protected endpoint returns a safe `503`; a mock provider verifies the successful delivery contract without sending live email.
+- The Header notification menu now reads real protected invoice lifecycle notifications instead of static sample alerts. Generated, email success/failure, overdue, and paid events are localized in English/Arabic.
+- A live temporary invoice check passed authenticated Arabic PDF generation, private signed download, safe unconfigured-email failure, overdue/email notifications, and complete cleanup. Permanent Customer and Invoice counts returned to 2 and 1; generated attachment metadata, delivery events, and notifications returned to zero. Security audit events intentionally retained the test trail.
+- English and Arabic one-page invoice PDFs were visually inspected in the browser. Layout, embedded text, totals, and RTL alignment were correct.
+- Latest totals: Backend `pytest` 117 passed; Frontend unit tests 31 passed; Python compilation, TypeScript, and the Next.js production build all passed.
 
 ## Phase 8 delivery
 

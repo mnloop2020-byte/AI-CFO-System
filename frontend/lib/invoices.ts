@@ -26,6 +26,18 @@ export type CreateInvoiceInput = {
 export type UpdateInvoiceInput =
   Partial<CreateInvoiceInput>;
 
+export type InvoicePdfDownload = {
+  url: string;
+  file_name: string;
+  expires_at: string;
+  generated: boolean;
+};
+
+export type InvoiceEmailResult = {
+  status: "sent";
+  message: string;
+};
+
 export function getInvoices() {
   return api.get<Invoice[]>("/invoices");
 }
@@ -49,5 +61,25 @@ export function updateInvoice(
 export function deleteInvoice(invoiceId: string) {
   return api.delete<void>(
     `/invoices/${invoiceId}`,
+  );
+}
+
+export function createInvoicePdfDownload(
+  invoiceId: string,
+  language: "en" | "ar",
+) {
+  return api.post<InvoicePdfDownload>(
+    `/invoices/${invoiceId}/pdf/download`,
+    { language },
+  );
+}
+
+export function sendInvoiceEmail(
+  invoiceId: string,
+  language: "en" | "ar",
+) {
+  return api.post<InvoiceEmailResult>(
+    `/invoices/${invoiceId}/email`,
+    { language },
   );
 }

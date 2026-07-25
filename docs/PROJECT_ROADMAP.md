@@ -1,6 +1,6 @@
 # AI CFO System Roadmap
 
-Last updated: 2026-07-23
+Last updated: 2026-07-25
 
 ## Product direction
 
@@ -43,6 +43,8 @@ Execute and test each item in this order:
 Status: **complete**. Company Settings, persisted private PDF reports, private financial attachments, immediate KPI refresh, and deterministic agent grounding are implemented and tested.
 
 CRM integration status: **complete and re-verified**. The five live modules enforce centralized read/write permissions, validated request contracts, server-calculated Sales totals, backend-derived overdue/low-stock states, safe relationship conflicts, duplicate Invoice/SKU checks, and temporary live CRUD with unchanged permanent counts.
+
+Invoice delivery status: **complete for Pilot**. Real bilingual invoice PDFs are generated from trusted backend records, stored in private company-scoped Storage, and downloaded through short-lived signed URLs. Invoice email delivery has permission checks, customer-address binding, idempotency, audit events, and a provider abstraction; it remains safely unavailable until SMTP configuration is supplied. Real invoice lifecycle notifications replaced static Header alerts. No live email was sent.
 
 ## Phase 3: AI Financial Action Center
 
