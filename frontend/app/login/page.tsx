@@ -93,11 +93,11 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-app-background p-4 sm:p-6">
-      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-7xl overflow-hidden rounded-3xl border border-border bg-surface shadow-xl lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="flex items-center justify-center px-6 py-10 sm:px-12 lg:px-16">
-          <div className="w-full max-w-md">
-            <div className="flex items-center justify-between gap-4">
+    <main className="min-h-screen overflow-x-hidden bg-app-background p-4 sm:p-6">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] min-w-0 max-w-7xl overflow-hidden rounded-3xl border border-border bg-surface shadow-xl lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="flex min-w-0 items-center justify-center px-6 py-10 sm:px-12 lg:px-16">
+          <div className="min-w-0 w-full max-w-md">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <Link href="/" className="inline-flex items-center gap-3">
                 <span className="flex size-11 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
                   <Sparkles size={22} />
@@ -124,7 +124,7 @@ export default function LoginPage() {
               <p className="text-sm font-medium text-primary">
                 {isArabic ? "مرحبًا بعودتك" : "Welcome back"}
               </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-primary">
+              <h1 className="mt-2 break-words text-3xl font-semibold tracking-tight text-text-primary">
                 {isArabic
                   ? "سجّل الدخول إلى مساحة عملك المالية"
                   : "Sign in to your financial workspace"}
@@ -161,7 +161,7 @@ export default function LoginPage() {
               </label>
 
               <label className="block space-y-2">
-                <span className="flex items-center justify-between gap-4">
+                <span className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:gap-4">
                   <span className="text-sm font-medium text-text-primary">
                     {isArabic ? "كلمة المرور" : "Password"}
                   </span>

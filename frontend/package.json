@@ -13,7 +13,8 @@
     "test:auth": "node --test tests/auth-access.test.ts",
     "test:crm": "node --test tests/crm-contract.test.ts",
     "test:invoice-delivery": "node --test tests/invoice-delivery-contract.test.ts",
-    "test": "npm run test:chat && npm run test:company && npm run test:profile && npm run test:auth && npm run test:crm && npm run test:invoice-delivery"
+    "test:language": "node --test tests/language-provider.test.ts",
+    "test": "npm run test:chat && npm run test:company && npm run test:profile && npm run test:auth && npm run test:crm && npm run test:invoice-delivery && npm run test:language"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

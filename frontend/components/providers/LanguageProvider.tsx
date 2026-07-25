@@ -156,6 +156,11 @@ export default function LanguageProvider({
   const [language, setLanguageState] =
     useState<AppLanguage>("en");
 
+  const [
+    hasLoadedStoredLanguage,
+    setHasLoadedStoredLanguage,
+  ] = useState(false);
+
   const direction: AppDirection =
     language === "ar" ? "rtl" : "ltr";
 
@@ -170,9 +175,15 @@ export default function LanguageProvider({
     ) {
       setLanguageState(savedLanguage);
     }
+
+    setHasLoadedStoredLanguage(true);
   }, []);
 
   useEffect(() => {
+    if (!hasLoadedStoredLanguage) {
+      return;
+    }
+
     document.documentElement.lang = language;
     document.documentElement.dir = direction;
 
@@ -180,7 +191,11 @@ export default function LanguageProvider({
       LANGUAGE_STORAGE_KEY,
       language,
     );
-  }, [language, direction]);
+  }, [
+    direction,
+    hasLoadedStoredLanguage,
+    language,
+  ]);
 
   function setLanguage(newLanguage: AppLanguage) {
     setLanguageState(newLanguage);

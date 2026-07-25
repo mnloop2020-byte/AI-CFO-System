@@ -191,3 +191,32 @@ The next implementation order is:
 ## Verification note
 
 The in-app browser completed the Expenses CRUD test and the Chat history restore/new-conversation test. Inventory and Invoices were verified through TypeScript, Next.js route compilation, HTTP 200 responses, and direct read-only API checks. Visual CRUD verification for those two sections remains desirable in the user's local browser.
+
+## MVP end-to-end acceptance
+
+- A safe linked scenario now covers Customers, Sales, Expenses, Inventory,
+  overdue Invoices, bilingual PDF reports, private signed downloads, RAG
+  upload/index/pgvector retrieval, and the three Financial Action types.
+- Action detection remained deduplicated; approval, rejection, non-external
+  execution replay, and the event timeline passed. Exact temporary business
+  rows and Storage objects were removed, while immutable audit history was
+  retained.
+- Settings/Profile/Auth, all four roles, invitation rules, protected Storage,
+  five-module CRM CRUD, invoice delivery, notification scanning, and chat
+  output contracts passed their live or automated integration checks.
+- The browser inspection found and fixed two UI issues: stored Arabic could
+  be overwritten by the initial English render on a full reload, and the
+  Login Grid/Flex layout could overflow on a `390x844` viewport.
+- The local in-app browser blocks cross-port requests to the FastAPI `8000`
+  origin, so its protected page captures show the designed error state.
+  Authenticated API and live integration scripts independently verified the
+  same backend workflows.
+- OpenRouter currently returns HTTP `402 Payment Required`. Live AI chat and
+  LLM-written report narratives are therefore blocked by an external account
+  condition; deterministic calculations, PDFs, RAG indexing/retrieval, CRUD,
+  Auth, and Action Center remain functional.
+- Final verification: Backend `pytest` 117 passed; Python compilation passed;
+  Frontend 32 tests passed; TypeScript passed; and the Next.js 15.5.19
+  production build generated all 22 application routes successfully.
+- Full details and the controlled-Pilot verdict are recorded in
+  `docs/MVP_ACCEPTANCE_REPORT.md`.

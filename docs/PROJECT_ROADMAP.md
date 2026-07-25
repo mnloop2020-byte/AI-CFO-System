@@ -86,6 +86,13 @@ Status: **Pilot-complete**. Audit events, route rate limits, upload/RAG safeguar
 
 Status: **complete for Pilot**. Automated backend/financial/RAG/upload/security tests, live Auth/role/RLS/Storage/Action checks, TypeScript, production build, and bilingual responsive browser checks passed.
 
+MVP acceptance update: the linked `E2E-MVP-` scenario passed CRM, reports,
+private Storage, RAG/pgvector, Action lifecycle, deduplication, idempotency,
+and cleanup. Language persistence and narrow Login overflow were corrected.
+Live LLM acceptance is temporarily blocked because the configured OpenRouter
+account returns HTTP `402`; this is an external Pilot blocker, not a database
+or deterministic-calculation failure.
+
 ## Phase 8: Delivery and deployment readiness
 
 Deployment requires successful Auth, RLS, Storage policies, role tests, backup verification, PDF reports, RAG, Action Center, and final end-to-end tests.
