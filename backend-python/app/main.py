@@ -19,7 +19,7 @@ from app.routes.notifications import router as notifications_router
 from app.routes.rag import router as rag_router
 from app.routes.reports import router as reports_router
 from app.routes.sales import router as sales_router
-from app.security.authentication import require_authenticated_request
+from app.security.authentication import require_mfa_request
 from app.utils.logger import configure_logging
 
 
@@ -49,7 +49,7 @@ app.add_middleware(RequestSecurityMiddleware)
 
 app.include_router(health_router)
 app.include_router(auth_router)
-protected_dependencies = [Depends(require_authenticated_request)]
+protected_dependencies = [Depends(require_mfa_request)]
 
 app.include_router(company_router, dependencies=protected_dependencies)
 app.include_router(audit_router, dependencies=protected_dependencies)

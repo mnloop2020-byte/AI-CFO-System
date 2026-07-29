@@ -33,6 +33,8 @@ class AuthMeResponse(BaseModel):
     company_name: str
     role: CompanyRole
     permissions: list[str]
+    authenticator_assurance_level: Literal["aal1", "aal2"]
+    mfa_required: bool
 
 
 class MemberResponse(BaseModel):
@@ -167,6 +169,11 @@ async def get_authenticated_user(
         company_name=context.company_name,
         role=context.company_role,
         permissions=sorted(context.permissions),
+        authenticator_assurance_level=context.authenticator_assurance_level,
+        mfa_required=(
+            context.company_role in {"owner", "admin"}
+            and context.authenticator_assurance_level != "aal2"
+        ),
     )
 
 

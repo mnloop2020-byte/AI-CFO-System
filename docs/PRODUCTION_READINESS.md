@@ -25,10 +25,13 @@ Last updated: 2026-07-29
   non-HTTPS, path-bearing, or implicit origin configuration
 - [x] Read-only Pilot HTTP readiness gate for liveness, configuration,
   request IDs, exact CORS, frontend availability, security headers, and HSTS
+- [x] Real TOTP enrollment and `aal2` enforcement for Owner/Admin verified
+  end to end against Supabase Local, including restrictive business/Storage RLS
 
 ## Production blockers
 
-- [ ] Implement and verify real MFA for privileged roles
+- [ ] Apply the reviewed MFA migration to the target environment and verify
+  Owner/Admin enrollment, recovery ownership, and `aal2` access before release
 - [ ] Replace process-local rate limiting with a shared Redis-backed limiter
 - [ ] Configure the final HTTPS domain and exact `CORS_ALLOWED_ORIGINS`, then
   verify secure proxy headers and HSTS with the target-mode readiness gate

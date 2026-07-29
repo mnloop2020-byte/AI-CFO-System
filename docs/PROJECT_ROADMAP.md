@@ -1,6 +1,6 @@
 # AI CFO System Roadmap
 
-Last updated: 2026-07-25
+Last updated: 2026-07-29
 
 ## Product direction
 
@@ -27,7 +27,7 @@ Build a bilingual AI CFO platform with live financial CRUD, reliable sourced ana
 - Real identity, role, name, HTTPS avatar, profile metadata, and password updates in Header/Profile.
 - Backend, TypeScript, production-build, role, invitation, RLS, and Storage checks.
 
-Status: **complete and integration-tested**. Settings/Profile/Auth live tests passed on 2026-07-23, including Bearer-token enforcement, sole-company context, role permissions, profile metadata, password change/restore, secure invitation admission, permission-driven member controls, self-escalation prevention, Admin/Owner boundaries, and temporary role restoration. MFA and advanced session controls remain Production blockers.
+Status: **complete and integration-tested locally**. Settings/Profile/Auth tests cover Bearer-token enforcement, sole-company context, role permissions, profile metadata, password change/restore, secure invitation admission, permission-driven member controls, self-escalation prevention, and Admin/Owner boundaries. Real TOTP MFA now requires Owner/Admin sessions to reach `aal2` in FastAPI and restrictive RLS. The MFA migration remains local-only pending separate approval for target application; advanced session controls remain deferred.
 
 ## Phase 2: Complete prior functional integrations
 
@@ -76,9 +76,9 @@ Status: **complete with conservative attribution**. All evidence-backed metrics 
 - Audit logs, rate limiting, CAPTCHA where appropriate, upload defenses, and RAG prompt-injection mitigation.
 - Timeouts/retries for external services, structured logging, and safe error handling.
 - Expanded backend/frontend tests, RLS/role tests, Arabic/English responsive checks, production build, Python compilation, and end-to-end scenarios.
-- Real MFA and advanced session management.
+- Real MFA for privileged roles and advanced session management.
 
-Status: **Pilot-complete**. Audit events, route rate limits, upload/RAG safeguards, bounded external calls, structured redacted logs, health checks, LLM usage monitoring, CSP/security headers, and recovery documentation are implemented. Shared distributed rate limiting and real MFA remain Production blockers.
+Status: **Pilot-complete locally**. Audit events, route rate limits, upload/RAG safeguards, bounded external calls, structured redacted logs, health checks, LLM usage monitoring, CSP/security headers, recovery documentation, and privileged-role TOTP MFA are implemented. Shared distributed rate limiting, target application of the reviewed MFA migration, and advanced session management remain Production blockers.
 
 ## Phase 7: Final verification
 
@@ -98,7 +98,7 @@ deduplicated, and no internal agent JSON was exposed.
 
 Deployment requires successful Auth, RLS, Storage policies, role tests, backup verification, PDF reports, RAG, Action Center, and final end-to-end tests.
 
-Status: **documentation complete; deployment intentionally stopped**. The system is suitable for a controlled development Pilot with synthetic/non-sensitive data. Production remains blocked by MFA, distributed rate limiting, target-domain hardening, a real backup/restore rehearsal, centralized monitoring, and external compliance/security review.
+Status: **documentation complete; deployment intentionally stopped**. The system is suitable for a controlled development Pilot with synthetic/non-sensitive data. Production remains blocked by target application/verification of MFA, distributed rate limiting, target-domain hardening, a real backup/restore rehearsal, centralized monitoring, and external compliance/security review.
 
 Pilot environment preparation update (2026-07-29): exact CORS origins are now
 environment-configured and fail closed in deployed modes. A read-only local or

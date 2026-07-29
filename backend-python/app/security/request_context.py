@@ -13,6 +13,7 @@ class RequestContext:
     company_role: str
     permissions: frozenset[str]
     access_token: str
+    authenticator_assurance_level: str = "aal1"
 
     def has_permission(self, permission: str) -> bool:
         return permission in self.permissions

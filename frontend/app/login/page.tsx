@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
-import { getAuthMe } from "@/lib/auth";
+import { clearAuthMeCache, getAuthMe } from "@/lib/auth";
 import { getSafeNextPath } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/client";
 
@@ -68,9 +68,20 @@ export default function LoginPage() {
         password,
       });
       if (error) throw error;
+      clearAuthMeCache();
 
       try {
-        await getAuthMe();
+        const identity = await getAuthMe();
+        if (identity.mfa_required) {
+          const nextPath = getSafeNextPath(
+            new URLSearchParams(window.location.search).get("next"),
+          );
+          router.replace(
+            `/login/mfa?next=${encodeURIComponent(nextPath)}`,
+          );
+          router.refresh();
+          return;
+        }
       } catch (membershipError) {
         await supabase.auth.signOut();
         throw membershipError;

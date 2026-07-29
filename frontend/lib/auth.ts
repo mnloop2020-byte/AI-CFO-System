@@ -10,6 +10,8 @@ export type AuthMe = {
   company_name: string;
   role: CompanyRole;
   permissions: string[];
+  authenticator_assurance_level: "aal1" | "aal2";
+  mfa_required: boolean;
 };
 
 export type CompanyMember = {

@@ -70,6 +70,15 @@ Public self-registration remains closed after Bootstrap.
 
 New users join only through a time-limited, exact-email, one-time invitation from Owner/Admin.
 
+## Privileged-role MFA
+
+- Owner and Admin must complete TOTP verification before accessing company data.
+- Password sign-in begins at `aal1`; the application redirects privileged users to `/login/mfa`, where a TOTP factor is enrolled and verified through Supabase Auth.
+- A factor is not treated as enabled until the first TOTP code is verified successfully. Verification promotes the session to `aal2` and revokes the prior `aal1` session.
+- FastAPI rejects Owner/Admin business requests at `aal1`. Restrictive RLS applies the same rule directly to all current public RLS tables and private Storage objects.
+- `/auth/me` and Supabase Auth remain available at `aal1`, providing the safe setup path that prevents a privileged account from being locked out before enrollment.
+- The current release does not provide recovery codes or a self-service factor reset. Before target deployment, designate a human recovery owner and verify the Supabase administrative recovery procedure.
+
 ## Reports and attachments
 
 - Generated report content comes from live RLS-scoped data and is rendered into a real bilingual PDF.
@@ -128,7 +137,9 @@ read business records, write database rows, or print secrets or response bodies.
 ## Known limitations
 
 - Single Company only; there is no company switcher.
-- MFA is deferred and remains a Production blocker.
+- TOTP MFA is implemented and verified locally. Applying its reviewed migration
+  and rehearsing privileged-account recovery in the target environment remain
+  Production blockers.
 - Rate limiting is in-memory per backend process; public multi-instance deployment requires a shared Redis-backed limiter.
 - Email, payment, banking, and purchasing integrations are not configured.
 - Collection cannot be attributed to AI until a verifiable payment timestamp and transaction reference exist.

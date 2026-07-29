@@ -1,11 +1,12 @@
 import asyncio
+from dataclasses import replace
 
 import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
 from app.routes.auth import InvitationCreate
-from app.security.authentication import require_permission
+from app.security.authentication import require_mfa_request, require_permission
 from app.security.request_context import RequestContext
 
 
@@ -38,6 +39,25 @@ def test_permission_dependency_rejects_viewer_write() -> None:
         asyncio.run(dependency(context))
 
     assert error.value.status_code == 403
+
+
+def test_privileged_roles_require_aal2_but_viewer_does_not() -> None:
+    privileged = make_context("financial.read")
+    privileged = replace(
+        privileged,
+        company_role="owner",
+        authenticator_assurance_level="aal1",
+    )
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(require_mfa_request(privileged))
+    assert error.value.status_code == 403
+
+    aal2_owner = replace(
+        privileged,
+        authenticator_assurance_level="aal2",
+    )
+    assert asyncio.run(require_mfa_request(aal2_owner)) is aal2_owner
+    assert asyncio.run(require_mfa_request(make_context("financial.read")))
 
 
 def test_invitation_normalizes_email_and_limits_role() -> None:

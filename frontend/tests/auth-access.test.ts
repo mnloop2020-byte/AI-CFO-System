@@ -20,6 +20,8 @@ const baseIdentity: AuthMe = {
   company_name: "Development Company",
   role: "admin",
   permissions: ["members.read", "members.invite", "members.manage"],
+  authenticator_assurance_level: "aal2",
+  mfa_required: false,
 };
 
 function member(
@@ -138,6 +140,10 @@ test("auth routes and bearer-token integration remain wired", () => {
     new URL("../app/login/reset-password/page.tsx", import.meta.url),
     "utf8",
   );
+  const login = readFileSync(
+    new URL("../app/login/page.tsx", import.meta.url),
+    "utf8",
+  );
   const apiClient = readFileSync(
     new URL("../lib/api.ts", import.meta.url),
     "utf8",
@@ -156,6 +162,16 @@ test("auth routes and bearer-token integration remain wired", () => {
   assert.match(apiClient, /Authorization.*Bearer/);
   assert.match(authClient, /authMeRequest/);
   assert.match(authClient, /AUTH_ME_CACHE_MS/);
+  assert.match(authClient, /mfa_required/);
+  assert.match(login, /clearAuthMeCache/);
+  assert.match(apiClient, /redirectToMfaIfRequired\(response\.status, message\)/);
+  const mfaPage = readFileSync(
+    new URL("../app/login/mfa/page.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(mfaPage, /mfa\.enroll/);
+  assert.match(mfaPage, /challengeAndVerify/);
+  assert.doesNotMatch(mfaPage, /design-only|Preview verification/);
 });
 
 test("frontend source never references the service-role secret", () => {

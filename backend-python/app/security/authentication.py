@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import json
 from collections.abc import AsyncIterator, Callable
 
 from fastapi import Depends, HTTPException, status
@@ -22,6 +24,21 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 class MissingCompanyMembershipError(Exception):
     pass
+
+
+def _get_authenticator_assurance_level(access_token: str) -> str:
+    try:
+        encoded_payload = access_token.split(".")[1]
+        padding = "=" * (-len(encoded_payload) % 4)
+        payload = json.loads(
+            base64.urlsafe_b64decode(encoded_payload + padding)
+        )
+        if not isinstance(payload, dict):
+            raise ValueError("Invalid access token claims")
+    except (IndexError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError("Invalid access token claims") from error
+    assurance_level = payload.get("aal", "aal1")
+    return assurance_level if assurance_level in {"aal1", "aal2"} else "aal1"
 
 
 def _resolve_request_context(access_token: str) -> RequestContext:
@@ -52,6 +69,9 @@ def _resolve_request_context(access_token: str) -> RequestContext:
         company_role=str(auth_context["role"]),
         permissions=frozenset(auth_context.get("permissions") or []),
         access_token=access_token,
+        authenticator_assurance_level=_get_authenticator_assurance_level(
+            access_token
+        ),
     )
 
 
@@ -94,13 +114,27 @@ async def require_authenticated_request(
         reset_request_context(token)
 
 
+async def require_mfa_request(
+    context: RequestContext = Depends(require_authenticated_request),
+) -> RequestContext:
+    if (
+        context.company_role in {"owner", "admin"}
+        and context.authenticator_assurance_level != "aal2"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Multi-factor authentication is required.",
+        )
+    return context
+
+
 def require_permission(
     permission: str,
 ) -> Callable[..., RequestContext]:
     """Build a FastAPI dependency backed by the database permission matrix."""
 
     async def permission_dependency(
-        context: RequestContext = Depends(require_authenticated_request),
+        context: RequestContext = Depends(require_mfa_request),
     ) -> RequestContext:
         if not context.has_permission(permission):
             raise HTTPException(

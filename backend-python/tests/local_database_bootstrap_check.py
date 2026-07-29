@@ -8,9 +8,13 @@ removes them.
 from __future__ import annotations
 
 import hashlib
+import base64
+import hmac
 import json
 import os
+import struct
 import sys
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -81,6 +85,59 @@ def sign_up(
     if response.user is None or response.session is None:
         raise AssertionError(f"Local sign-up did not create a session for {email}.")
     return str(response.user.id), response.session.access_token
+
+
+def _totp_code(secret: str, now: int | None = None) -> str:
+    normalized = secret.strip().replace(" ", "").upper()
+    padding = "=" * (-len(normalized) % 8)
+    key = base64.b32decode(normalized + padding)
+    counter = (now if now is not None else int(time.time())) // 30
+    digest = hmac.new(
+        key,
+        struct.pack(">Q", counter),
+        hashlib.sha1,
+    ).digest()
+    offset = digest[-1] & 0x0F
+    value = (struct.unpack(">I", digest[offset : offset + 4])[0] & 0x7FFFFFFF)
+    return f"{value % 1_000_000:06d}"
+
+
+def sign_in_with_totp(email: str, password: str) -> str:
+    client = create_client(API_URL, PUBLISHABLE_KEY)
+    response = client.auth.sign_in_with_password(
+        {"email": email, "password": password}
+    )
+    if response.session is None:
+        raise AssertionError("Password sign-in did not create a session.")
+    factors = client.auth.mfa.list_factors()
+    verified = next(
+        (factor for factor in factors.totp if factor.status == "verified"),
+        None,
+    )
+    if verified is None:
+        enrollment = client.auth.mfa.enroll(
+            {
+                "factor_type": "totp",
+                "friendly_name": "Local MFA test",
+            }
+        )
+        if enrollment.totp is None:
+            raise AssertionError("TOTP enrollment did not return a secret.")
+        factor_id = enrollment.id
+        secret = enrollment.totp.secret
+    else:
+        factor_id = verified.id
+        raise AssertionError("Disposable local user unexpectedly has an MFA factor.")
+    client.auth.mfa.challenge_and_verify(
+        {
+            "factor_id": factor_id,
+            "code": _totp_code(secret),
+        }
+    )
+    promoted = client.auth.get_session()
+    if promoted is None:
+        raise AssertionError("MFA verification did not create an AAL2 session.")
+    return promoted.access_token
 
 
 def invite_role(
@@ -225,16 +282,43 @@ def main() -> None:
         "claim_owner_bootstrap",
         {"bootstrap_token": bootstrap_token},
     ).execute()
+    owner_aal1_token = owner_token
 
     with TestClient(app) as api:
         unauthenticated = api.get("/customers")
         assert unauthenticated.status_code == 401, unauthenticated.text
 
+        aal1_identity = api.get("/auth/me", headers=bearer(owner_aal1_token))
+        assert aal1_identity.status_code == 200, aal1_identity.text
+        assert aal1_identity.json()["mfa_required"] is True
+        assert (
+            api.get("/customers", headers=bearer(owner_aal1_token)).status_code
+            == 403
+        )
+        owner_aal1_members = (
+            user_client(owner_aal1_token)
+            .table("company_members")
+            .select("user_id")
+            .execute()
+        )
+        assert owner_aal1_members.data == []
+
+        owner_token = sign_in_with_totp(owner_email, password)
         owner_me = api.get("/auth/me", headers=bearer(owner_token))
         assert owner_me.status_code == 200, owner_me.text
         owner_identity = owner_me.json()
         assert owner_identity["role"] == "owner"
+        assert owner_identity["mfa_required"] is False
+        assert owner_identity["authenticator_assurance_level"] == "aal2"
         company_id = owner_identity["company_id"]
+
+        owner_aal2_members = (
+            user_client(owner_token)
+            .table("company_members")
+            .select("user_id")
+            .execute()
+        )
+        assert len(owner_aal2_members.data) == 1
 
         role_tokens: dict[str, str] = {}
         role_ids: dict[str, str] = {}
@@ -247,10 +331,22 @@ def main() -> None:
                 password=password,
             )
             role_ids[role] = user_id
-            role_tokens[role] = token
-            identity = api.get("/auth/me", headers=bearer(token))
+            role_tokens[role] = (
+                sign_in_with_totp(f"{role}-{run_id}@local.test", password)
+                if role == "admin"
+                else token
+            )
+            identity = api.get(
+                "/auth/me",
+                headers=bearer(role_tokens[role]),
+            )
             assert identity.status_code == 200, identity.text
             assert identity.json()["role"] == role
+            if role == "admin":
+                assert identity.json()["mfa_required"] is False
+                assert (
+                    identity.json()["authenticator_assurance_level"] == "aal2"
+                )
 
         owner_permissions = set(owner_identity["permissions"])
         admin_permissions = set(

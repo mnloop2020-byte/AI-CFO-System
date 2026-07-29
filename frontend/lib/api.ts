@@ -70,6 +70,7 @@ async function apiRequest<T>(
       }
     }
 
+    redirectToMfaIfRequired(response.status, message);
     throw new ApiError(message, response.status);
   }
 
@@ -78,6 +79,18 @@ async function apiRequest<T>(
   }
 
   return JSON.parse(responseText) as T;
+}
+
+function redirectToMfaIfRequired(status: number, message: string) {
+  if (
+    status === 403 &&
+    message === "Multi-factor authentication is required." &&
+    typeof window !== "undefined" &&
+    window.location.pathname !== "/login/mfa"
+  ) {
+    const next = `${window.location.pathname}${window.location.search}`;
+    window.location.assign(`/login/mfa?next=${encodeURIComponent(next)}`);
+  }
 }
 
 async function addAuthentication(headers: Headers) {
@@ -131,6 +144,7 @@ async function apiBlobRequest(
       }
     }
 
+    redirectToMfaIfRequired(response.status, message);
     throw new ApiError(message, response.status);
   }
 

@@ -1,6 +1,6 @@
 # AI CFO System Current Status
 
-Last updated: 2026-07-25
+Last updated: 2026-07-29
 
 ## Completed localization
 
@@ -12,7 +12,7 @@ Last updated: 2026-07-25
 - Invoices page, table, and form; TypeScript, route compilation, HTTP response, and live API values were verified.
 - Reports page, templates, generation dialog, real report history, and protected PDF downloads are localized and connected.
 - Settings page and company-settings form load and update the real company through the Bearer-protected FastAPI API, with Owner/Admin edits and Accountant/Viewer read-only access.
-- Profile and Security displays the authenticated Supabase user, company, and database-backed role. The user can update their name, phone, HTTPS avatar URL, preferred language, and password through Supabase Auth. MFA and advanced session management remain explicitly deferred.
+- Profile and Security displays the authenticated Supabase user, company, and database-backed role. The user can update their name, phone, HTTPS avatar URL, preferred language, and password through Supabase Auth. TOTP MFA is implemented locally for Owner/Admin; advanced session management remains deferred.
 - Authentication UI now provides real login/logout, invitation-only registration, email confirmation callback handling, password recovery, and password update in English/Arabic with protected redirects.
 - Shared modal accessibility labels and unique dialog title/description IDs were localized.
 - Previously missed Chat and Customers page headers were localized.
@@ -55,7 +55,10 @@ Last updated: 2026-07-25
 - Live authorization checks passed for Owner, Admin, Accountant, and Viewer; Viewer writes and Accountant member management were denied, Accountant financial/Storage writes were allowed, a second company was rejected, and wrong-email/expired/used invitations were rejected.
 - Private Storage role tests passed. The temporary object created by the check was removed; no existing object or business record was deleted.
 - Development dependencies are isolated in `requirements-dev.txt`. Pytest reports 12 passed tests, Python compilation passes, TypeScript passes, and the Next.js 15.5.19 production build generated all 23 routes successfully.
-- MFA remains a documented later security stage so it does not delay the completed authentication and authorization foundation.
+- TOTP MFA is implemented and integration-tested against Supabase Local. Owner/Admin business access requires an `aal2` JWT in FastAPI and restrictive RLS, while `/auth/me` and Supabase Auth remain reachable at `aal1` so a privileged user can enroll without account lockout.
+- The bilingual MFA screen enrolls a TOTP factor, displays the Supabase-generated QR/secret, and promotes the session only after `challengeAndVerify` succeeds. Login redirects privileged `aal1` sessions to this screen; safe `next` validation remains in force.
+- Migration `20260729150000_require_mfa_for_privileged_roles.sql` was applied only to Supabase Local. It has not been applied to the remote project, and no remote database write was performed during this stage.
+- Local verification passed for Owner/Admin `aal1` denial, real TOTP promotion to `aal2`, direct RLS denial/allow behavior, Accountant/Viewer role behavior, private Storage, CRUD, last-Owner protection, and missing-membership `403`.
 
 ## Current live test records to preserve
 
@@ -130,7 +133,7 @@ The next implementation order is:
 - Migration `20260722140000_add_security_audit_events.sql` (SHA-256 `6D0C05958010E6CB25F88279299C5DA678C71D923D1C8821B581EDF7C90C1BE0`) was applied once. RLS, one Owner/Admin read policy, and seven safe metadata-only triggers were verified with unchanged protected counts.
 - A live action update created one audit event containing no protected field names. Owner/Admin audit reads returned `200`, Viewer returned `403`, and no financial content, token hash, Storage path, RAG evidence, or proposed-action payload was stored in the general audit row.
 - Liveness/readiness endpoints pass. Backup and isolated restore-rehearsal procedures are documented in `docs/SECURITY_OPERATIONS.md`; no destructive restore was run. The backend suite reports 44 passing tests, Python compilation passes, TypeScript passes, and a new production build ID was generated.
-- Production limitation: the current limiter is process-local and must be replaced with a shared Redis-backed limiter before multi-instance public deployment. MFA remains deferred and required before Production readiness.
+- Production limitation: the current limiter is process-local and must be replaced with a shared Redis-backed limiter before multi-instance public deployment. MFA code is locally verified, but its reviewed migration and target-environment enrollment flow must still be applied and verified before Production readiness.
 
 ## Phase 7 verification
 
