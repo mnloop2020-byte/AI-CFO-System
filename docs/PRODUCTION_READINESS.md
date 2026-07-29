@@ -39,7 +39,8 @@ Last updated: 2026-07-29
   availability alerts, capacity, and outage behavior in the target environment
 - [ ] Configure the final HTTPS domain and exact `CORS_ALLOWED_ORIGINS`, then
   verify secure proxy headers and HSTS with the target-mode readiness gate
-- [ ] Run an encrypted backup and successful isolated restore rehearsal with documented checksums
+- [x] Complete a local isolated database restore rehearsal with documented checksums
+- [ ] Run an encrypted target backup and restore private Storage object bytes in an isolated target environment
 - [ ] Configure centralized log/metric collection, alerting, retention, and incident ownership
 - [ ] Complete penetration testing and dependency/license review in the target deployment environment
 - [ ] Confirm regional privacy, retention, accounting, tax, and data-processing requirements with qualified professionals

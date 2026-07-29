@@ -33,6 +33,9 @@ Last updated: 2026-07-22
 
 ## Backup procedure (non-destructive)
 
+The executable local rehearsal and full production runbook are maintained in
+`docs/BACKUP_RESTORE_RUNBOOK.md`.
+
 1. Confirm the linked project reference is `tjadermimgzncdvfjpra`.
 2. Create an encrypted logical database backup with the Supabase-supported backup workflow or `pg_dump` using a freshly obtained connection string. Never commit the dump or connection string.
 3. Export private Storage bucket inventories (`documents`, `reports`, and `financial-attachments`) and copy objects into encrypted restricted backup storage.
@@ -46,7 +49,12 @@ Last updated: 2026-07-22
 3. Restore private Storage objects while preserving their exact bucket paths and privacy settings.
 4. Run the verification SQL, RLS/role tests, signed-download tests, RAG source test, and Action Center lifecycle test.
 5. Compare all protected counts and sample checksums with the backup manifest.
-6. Destroy the isolated rehearsal project only after the results are documented. This procedure has been documented but no destructive restore has been performed against the current project.
+6. Destroy the isolated rehearsal project only after the results are documented.
+
+On 2026-07-29, a database restore was completed against a separate disposable
+local Docker target. All 53 compared table signatures and the
+application schema/RLS/policy fingerprints matched. The local Storage buckets
+were empty, so restoring real object bytes remains a target-environment gate.
 
 ## Incident response
 

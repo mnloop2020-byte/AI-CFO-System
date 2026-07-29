@@ -134,7 +134,12 @@ The next implementation order is:
 - The frontend sends CSP, anti-framing, MIME-sniffing, referrer, and browser-permission headers. Existing local-only redirect validation remains in place; React/Markdown rendering does not enable raw HTML. Bearer-protected FastAPI writes are not cookie-authenticated CSRF targets.
 - Migration `20260722140000_add_security_audit_events.sql` (SHA-256 `6D0C05958010E6CB25F88279299C5DA678C71D923D1C8821B581EDF7C90C1BE0`) was applied once. RLS, one Owner/Admin read policy, and seven safe metadata-only triggers were verified with unchanged protected counts.
 - A live action update created one audit event containing no protected field names. Owner/Admin audit reads returned `200`, Viewer returned `403`, and no financial content, token hash, Storage path, RAG evidence, or proposed-action payload was stored in the general audit row.
-- Liveness/readiness endpoints pass. Backup and isolated restore-rehearsal procedures are documented in `docs/SECURITY_OPERATIONS.md`; no destructive restore was run. The backend suite reports 44 passing tests, Python compilation passes, TypeScript passes, and a new production build ID was generated.
+- Liveness/readiness endpoints pass. Backup and restore procedures are documented
+  in `docs/SECURITY_OPERATIONS.md` and `docs/BACKUP_RESTORE_RUNBOOK.md`. On
+  2026-07-29, a Supabase Local dump was restored into a separate disposable
+  Docker database: 53 table signatures and all checked schema/RLS/policy
+  fingerprints matched. Private Storage object-byte restoration remains a
+  target-environment gate because the local buckets contained no objects.
 - Production limitation: the Redis implementation is locally verified, but a managed TLS Redis service must be provisioned and tested in the target environment. MFA code is locally verified, but its reviewed migration and target-environment enrollment flow must still be applied and verified before Production readiness.
 
 ## Phase 7 verification

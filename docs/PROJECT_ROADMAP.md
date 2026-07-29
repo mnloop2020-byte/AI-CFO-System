@@ -98,7 +98,13 @@ deduplicated, and no internal agent JSON was exposed.
 
 Deployment requires successful Auth, RLS, Storage policies, role tests, backup verification, PDF reports, RAG, Action Center, and final end-to-end tests.
 
-Status: **documentation complete; deployment intentionally stopped**. The system is suitable for a controlled development Pilot with synthetic/non-sensitive data. Production remains blocked by target application/verification of MFA, provisioning/verification of the TLS Redis service, target-domain hardening, a real backup/restore rehearsal, centralized monitoring, and external compliance/security review.
+Status: **local database restore rehearsal complete; deployment intentionally
+stopped**. The system is suitable for a controlled development Pilot with
+synthetic/non-sensitive data. Production remains blocked by target
+application/verification of MFA, provisioning/verification of the TLS Redis
+service, target-domain hardening, an encrypted target backup plus private
+Storage object-byte restore, centralized monitoring, and external
+compliance/security review.
 
 Pilot environment preparation update (2026-07-29): exact CORS origins are now
 environment-configured and fail closed in deployed modes. A read-only local or
