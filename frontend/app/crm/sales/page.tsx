@@ -25,6 +25,12 @@ import {
   getSales,
   type Sale,
 } from "@/lib/sales";
+import {
+  addMoney,
+  compareMoney,
+  formatMoney,
+  type MoneyString,
+} from "@/lib/money";
 
 const UNKNOWN_LOAD_ERROR =
   "Unable to load sales metrics.";
@@ -33,22 +39,12 @@ function normalizeStatus(status: string) {
   return status.trim().toLowerCase();
 }
 
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
 function findTopProduct(sales: Sale[]) {
   const productPerformance = new Map<
     string,
     {
       quantity: number;
-      revenue: number;
+      revenue: MoneyString;
     }
   >();
 
@@ -58,7 +54,7 @@ function findTopProduct(sales: Sale[]) {
         sale.product_name,
       ) ?? {
         quantity: 0,
-        revenue: 0,
+        revenue: "0.00",
       };
 
     productPerformance.set(
@@ -67,9 +63,10 @@ function findTopProduct(sales: Sale[]) {
         quantity:
           current.quantity +
           Number(sale.quantity),
-        revenue:
-          current.revenue +
-          Number(sale.total_amount),
+        revenue: addMoney([
+          current.revenue,
+          sale.total_amount,
+        ]),
       },
     );
   });
@@ -85,9 +82,9 @@ function findTopProduct(sales: Sale[]) {
       return quantityDifference;
     }
 
-    return (
-      secondProduct[1].revenue -
-      firstProduct[1].revenue
+    return compareMoney(
+      secondProduct[1].revenue,
+      firstProduct[1].revenue,
     );
   });
 
@@ -188,12 +185,11 @@ export default function SalesPage() {
         "completed",
     );
 
-    const completedRevenue =
-      completedSales.reduce(
-        (total, sale) =>
-          total + Number(sale.total_amount),
-        0,
-      );
+    const completedRevenue = addMoney(
+      completedSales.map(
+        (sale) => sale.total_amount,
+      ),
+    );
 
     const completedUnits =
       completedSales.reduce(
@@ -222,7 +218,7 @@ export default function SalesPage() {
           : "Completed Revenue",
         value: loading
           ? "—"
-          : formatAmount(
+          : formatMoney(
               salesSummary.completedRevenue,
               numberLocale,
             ),

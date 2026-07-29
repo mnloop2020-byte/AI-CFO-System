@@ -12,6 +12,8 @@ from pydantic import (
     model_validator,
 )
 
+from app.money import MoneyDecimal, parse_money
+
 
 _DAY_SETTING_FIELDS = (
     "invoice_high_priority_days",
@@ -44,13 +46,13 @@ def _validate_day_setting(value: object) -> int:
     return value
 
 
-def _validate_amount_setting(value: object) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+def _validate_amount_setting(value: object) -> Decimal:
+    if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
         raise ValueError("Financial alert thresholds must be numeric.")
-    numeric = Decimal(str(value))
-    if not numeric.is_finite() or numeric < 0:
+    numeric = parse_money(value)
+    if numeric < 0:
         raise ValueError("Financial alert thresholds must be finite and non-negative.")
-    return float(numeric)
+    return numeric
 
 
 def _normalize_text(value: object) -> object:
@@ -79,10 +81,10 @@ class FinancialSettings(BaseModel):
 
     invoice_high_priority_days: int = 30
     invoice_critical_days: int = 60
-    high_amount_threshold: float = 10_000.0
-    critical_amount_threshold: float = 50_000.0
-    cash_reserve_threshold: float = 75_000.0
-    large_expense_review_threshold: float = 15_000.0
+    high_amount_threshold: MoneyDecimal = Decimal("10000.00")
+    critical_amount_threshold: MoneyDecimal = Decimal("50000.00")
+    cash_reserve_threshold: MoneyDecimal = Decimal("75000.00")
+    large_expense_review_threshold: MoneyDecimal = Decimal("15000.00")
 
     @field_validator(*_DAY_SETTING_FIELDS, mode="before")
     @classmethod
@@ -91,7 +93,7 @@ class FinancialSettings(BaseModel):
 
     @field_validator(*_AMOUNT_SETTING_FIELDS, mode="before")
     @classmethod
-    def validate_amount_settings(cls, value: object) -> float:
+    def validate_amount_settings(cls, value: object) -> Decimal:
         return _validate_amount_setting(value)
 
     @model_validator(mode="after")
@@ -112,10 +114,10 @@ class FinancialSettingsPatch(BaseModel):
 
     invoice_high_priority_days: int | None = None
     invoice_critical_days: int | None = None
-    high_amount_threshold: float | None = None
-    critical_amount_threshold: float | None = None
-    cash_reserve_threshold: float | None = None
-    large_expense_review_threshold: float | None = None
+    high_amount_threshold: MoneyDecimal | None = None
+    critical_amount_threshold: MoneyDecimal | None = None
+    cash_reserve_threshold: MoneyDecimal | None = None
+    large_expense_review_threshold: MoneyDecimal | None = None
 
     @field_validator(*_DAY_SETTING_FIELDS, mode="before")
     @classmethod
@@ -124,7 +126,7 @@ class FinancialSettingsPatch(BaseModel):
 
     @field_validator(*_AMOUNT_SETTING_FIELDS, mode="before")
     @classmethod
-    def validate_amount_settings(cls, value: object) -> float:
+    def validate_amount_settings(cls, value: object) -> Decimal:
         return _validate_amount_setting(value)
 
     @model_validator(mode="after")
@@ -165,7 +167,7 @@ class CompanySettingsBase(BaseModel):
     tax_id: str | None = Field(default=None, max_length=100)
     vat_registered: bool | None = None
     bank_name: str | None = Field(default=None, max_length=160)
-    opening_balance: Decimal | None = Field(
+    opening_balance: MoneyDecimal | None = Field(
         default=None,
         ge=Decimal("-9999999999999999.99"),
         le=Decimal("9999999999999999.99"),
@@ -221,7 +223,7 @@ class CompanySettingsUpdate(BaseModel):
     tax_id: str | None = Field(default=None, max_length=100)
     vat_registered: bool | None = None
     bank_name: str | None = Field(default=None, max_length=160)
-    opening_balance: Decimal | None = Field(
+    opening_balance: MoneyDecimal | None = Field(
         default=None,
         ge=Decimal("-9999999999999999.99"),
         le=Decimal("9999999999999999.99"),

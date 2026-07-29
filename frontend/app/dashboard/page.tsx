@@ -27,42 +27,49 @@ import { subscribeToDataChanges } from "@/lib/data-events";
 import { getExpenses } from "@/lib/expenses";
 import { getInventoryItems } from "@/lib/inventory";
 import { getInvoices } from "@/lib/invoices";
+import {
+  addMoney,
+  compareMoney,
+  formatMoney,
+  subtractMoney,
+  type MoneyString,
+} from "@/lib/money";
 import { getSales } from "@/lib/sales";
 
 type DashboardSummary = {
-  completedRevenue: number;
+  completedRevenue: MoneyString;
   completedUnits: number;
-  totalExpenses: number;
+  totalExpenses: MoneyString;
   flaggedExpenseCount: number;
-  flaggedExpenseAmount: number;
-  operatingResult: number;
-  outstandingReceivables: number;
+  flaggedExpenseAmount: MoneyString;
+  operatingResult: MoneyString;
+  outstandingReceivables: MoneyString;
   outstandingInvoiceCount: number;
-  trackedInflows: number;
-  expectedInflows: number;
-  netCashFlow: number;
+  trackedInflows: MoneyString;
+  expectedInflows: MoneyString;
+  netCashFlow: MoneyString;
   lowStockCount: number;
   lowStockQuantity: number;
   reorderLevel: number;
-  invoicedVat: number;
+  invoicedVat: MoneyString;
 };
 
 const emptySummary: DashboardSummary = {
-  completedRevenue: 0,
+  completedRevenue: "0.00",
   completedUnits: 0,
-  totalExpenses: 0,
+  totalExpenses: "0.00",
   flaggedExpenseCount: 0,
-  flaggedExpenseAmount: 0,
-  operatingResult: 0,
-  outstandingReceivables: 0,
+  flaggedExpenseAmount: "0.00",
+  operatingResult: "0.00",
+  outstandingReceivables: "0.00",
   outstandingInvoiceCount: 0,
-  trackedInflows: 0,
-  expectedInflows: 0,
-  netCashFlow: 0,
+  trackedInflows: "0.00",
+  expectedInflows: "0.00",
+  netCashFlow: "0.00",
   lowStockCount: 0,
   lowStockQuantity: 0,
   reorderLevel: 0,
-  invoicedVat: 0,
+  invoicedVat: "0.00",
 };
 
 function normalizeStatus(status: string) {
@@ -70,7 +77,7 @@ function normalizeStatus(status: string) {
 }
 
 function formatAmount(
-  amount: number,
+  amount: MoneyString,
   language: "en" | "ar",
 ) {
   const locale =
@@ -78,10 +85,7 @@ function formatAmount(
       ? "ar-SA-u-nu-latn"
       : "en-US";
 
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatMoney(amount, locale);
 }
 
 function pluralize(
@@ -127,13 +131,11 @@ export default function DashboardPage() {
             "completed",
         );
 
-        const completedRevenue =
-          completedSales.reduce(
-            (total, sale) =>
-              total +
-              Number(sale.total_amount),
-            0,
-          );
+        const completedRevenue = addMoney(
+          completedSales.map(
+            (sale) => sale.total_amount,
+          ),
+        );
 
         const completedUnits =
           completedSales.reduce(
@@ -142,13 +144,11 @@ export default function DashboardPage() {
             0,
           );
 
-        const totalExpenses =
-          expenses.reduce(
-            (total, expense) =>
-              total +
-              Number(expense.amount),
-            0,
-          );
+        const totalExpenses = addMoney(
+          expenses.map(
+            (expense) => expense.amount,
+          ),
+        );
 
         const flaggedExpenses =
           expenses.filter(
@@ -156,13 +156,11 @@ export default function DashboardPage() {
               expense.is_flagged,
           );
 
-        const flaggedExpenseAmount =
-          flaggedExpenses.reduce(
-            (total, expense) =>
-              total +
-              Number(expense.amount),
-            0,
-          );
+        const flaggedExpenseAmount = addMoney(
+          flaggedExpenses.map(
+            (expense) => expense.amount,
+          ),
+        );
 
         const paidInvoices =
           invoices.filter(
@@ -185,25 +183,17 @@ export default function DashboardPage() {
             );
           });
 
-        const trackedInflows =
-          paidInvoices.reduce(
-            (total, invoice) =>
-              total +
-              Number(
-                invoice.total_amount,
-              ),
-            0,
-          );
+        const trackedInflows = addMoney(
+          paidInvoices.map(
+            (invoice) => invoice.total_amount,
+          ),
+        );
 
-        const expectedInflows =
-          outstandingInvoices.reduce(
-            (total, invoice) =>
-              total +
-              Number(
-                invoice.total_amount,
-              ),
-            0,
-          );
+        const expectedInflows = addMoney(
+          outstandingInvoices.map(
+            (invoice) => invoice.total_amount,
+          ),
+        );
 
         const lowStockItems =
           inventoryItems.filter(
@@ -217,13 +207,11 @@ export default function DashboardPage() {
         const firstLowStockItem =
           lowStockItems[0] ?? null;
 
-        const invoicedVat =
-          invoices.reduce(
-            (total, invoice) =>
-              total +
-              Number(invoice.vat_amount),
-            0,
-          );
+        const invoicedVat = addMoney(
+          invoices.map(
+            (invoice) => invoice.vat_amount,
+          ),
+        );
 
         setSummary({
           completedRevenue,
@@ -232,18 +220,20 @@ export default function DashboardPage() {
           flaggedExpenseCount:
             flaggedExpenses.length,
           flaggedExpenseAmount,
-          operatingResult:
-            completedRevenue -
+          operatingResult: subtractMoney(
+            completedRevenue,
             totalExpenses,
+          ),
           outstandingReceivables:
             expectedInflows,
           outstandingInvoiceCount:
             outstandingInvoices.length,
           trackedInflows,
           expectedInflows,
-          netCashFlow:
-            trackedInflows -
+          netCashFlow: subtractMoney(
+            trackedInflows,
             totalExpenses,
+          ),
           lowStockCount:
             lowStockItems.length,
           lowStockQuantity:
@@ -374,7 +364,10 @@ export default function DashboardPage() {
         icon: TriangleAlert,
 
         tone:
-          summary.operatingResult < 0
+          compareMoney(
+            summary.operatingResult,
+            "0.00",
+          ) < 0
             ? ("red" as const)
             : ("green" as const),
       },
@@ -447,7 +440,10 @@ export default function DashboardPage() {
     }
 
     if (
-      summary.netCashFlow < 0 &&
+      compareMoney(
+        summary.netCashFlow,
+        "0.00",
+      ) < 0 &&
       summary.flaggedExpenseCount > 0
     ) {
       return language === "ar"
@@ -465,7 +461,12 @@ export default function DashboardPage() {
           };
     }
 
-    if (summary.operatingResult < 0) {
+    if (
+      compareMoney(
+        summary.operatingResult,
+        "0.00",
+      ) < 0
+    ) {
       return language === "ar"
         ? {
             title:
@@ -502,7 +503,10 @@ export default function DashboardPage() {
     }
 
     if (
-      summary.outstandingReceivables > 0
+      compareMoney(
+        summary.outstandingReceivables,
+        "0.00",
+      ) > 0
     ) {
       return language === "ar"
         ? {

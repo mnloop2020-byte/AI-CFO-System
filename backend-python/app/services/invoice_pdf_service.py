@@ -4,6 +4,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
 from typing import Literal
@@ -15,6 +16,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
+
+from app.money import subtract_money
 
 
 InvoiceLanguage = Literal["en", "ar"]
@@ -44,8 +47,8 @@ _SAFE_FILENAME_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
 class InvoicePdfData:
     invoice_number: str
     status: str
-    total_amount: float
-    vat_amount: float
+    total_amount: Decimal
+    vat_amount: Decimal
     currency: str
     issued_at: datetime
     due_at: datetime | None
@@ -106,7 +109,7 @@ def _format_date(value: datetime | None, language: InvoiceLanguage) -> str:
     return utc_value.strftime("%Y-%m-%d")
 
 
-def _format_amount(value: float, currency: str) -> str:
+def _format_amount(value: Decimal, currency: str) -> str:
     return f"{value:,.2f} {currency}"
 
 
@@ -373,7 +376,10 @@ def create_invoice_pdf(
     canvas.setStrokeColor(COLOR_BORDER)
     canvas.setFillColor(COLOR_SURFACE)
     canvas.roundRect(MARGIN, summary_y - 108, CONTENT_WIDTH, 126, 8, stroke=1, fill=1)
-    subtotal = max(0.0, data.total_amount - data.vat_amount)
+    subtotal = max(
+        Decimal("0.00"),
+        subtract_money(data.total_amount, data.vat_amount),
+    )
     summary_rows = (
         (labels["subtotal"], _format_amount(subtotal, data.currency)),
         (labels["vat"], _format_amount(data.vat_amount, data.currency)),

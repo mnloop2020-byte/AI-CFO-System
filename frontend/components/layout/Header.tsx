@@ -5,7 +5,6 @@ import {
   Languages,
   LogOut,
   Menu,
-  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +15,11 @@ import {
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import NotificationsMenu from "@/components/layout/NotificationsMenu";
-import { getAuthMe, type CompanyRole } from "@/lib/auth";
+import {
+  clearAuthMeCache,
+  getAuthMe,
+  type CompanyRole,
+} from "@/lib/auth";
 import { normalizeAvatarUrl } from "@/lib/profile-validation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -87,6 +90,7 @@ export default function Header({
 
   const [accountName, setAccountName] = useState("User");
   const [accountRole, setAccountRole] = useState<CompanyRole | null>(null);
+  const [accountRoleLoaded, setAccountRoleLoaded] = useState(false);
   const [accountAvatarUrl, setAccountAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,8 +112,9 @@ export default function Header({
           setAccountAvatarUrl(null);
         }
         setAccountRole(identity.role);
+        setAccountRoleLoaded(true);
       })
-      .catch(() => undefined);
+      .catch(() => setAccountRoleLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -141,6 +146,7 @@ export default function Header({
   async function signOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    clearAuthMeCache();
     router.replace("/login");
     router.refresh();
   }
@@ -167,7 +173,13 @@ export default function Header({
           viewer: "المشاهد",
         }[accountRole]
       : accountRole
-    : t("administrator");
+    : accountRoleLoaded
+      ? language === "ar"
+        ? "الدور غير متاح"
+        : "Role unavailable"
+      : language === "ar"
+        ? "جارٍ تحميل الدور..."
+        : "Loading role...";
 
   function openMobileSidebar() {
     window.dispatchEvent(
@@ -206,20 +218,6 @@ export default function Header({
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <label className="hidden h-10 w-64 items-center gap-2 rounded-xl border border-border bg-app-background px-3 transition-colors focus-within:border-primary xl:flex">
-            <Search
-              size={18}
-              className="shrink-0 text-text-secondary"
-            />
-
-            <input
-              type="search"
-              placeholder={t("searchFinancialData")}
-              aria-label={t("searchFinancialData")}
-              className="w-full bg-transparent text-sm text-text-primary outline-none placeholder:text-text-secondary"
-            />
-          </label>
-
           <button
             type="button"
             onClick={toggleLanguage}

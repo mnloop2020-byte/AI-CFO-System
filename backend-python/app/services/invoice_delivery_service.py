@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
+from app.money import parse_money
 from app.schemas.invoices_schema import InvoicePdfDownload
 from app.security.request_context import get_request_context
 from app.services.attachment_service import (
@@ -121,8 +122,8 @@ def _load_invoice_document(invoice_id: UUID) -> InvoiceDocument:
         pdf_data=InvoicePdfData(
             invoice_number=str(invoice["invoice_number"]),
             status=str(invoice["status"]),
-            total_amount=float(invoice["total_amount"]),
-            vat_amount=float(invoice["vat_amount"]),
+            total_amount=parse_money(invoice["total_amount"]),
+            vat_amount=parse_money(invoice["vat_amount"]),
             currency=company.currency or "XXX",
             issued_at=issued_at,
             due_at=due_at,

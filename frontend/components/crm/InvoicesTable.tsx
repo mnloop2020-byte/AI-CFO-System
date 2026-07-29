@@ -41,6 +41,7 @@ import {
   type CreateInvoiceInput,
   type Invoice,
 } from "@/lib/invoices";
+import { formatMoney } from "@/lib/money";
 
 type StatusFilter =
   | "all"
@@ -51,16 +52,6 @@ type StatusFilter =
 
 const UNKNOWN_LOAD_ERROR =
   "Unable to load invoice records.";
-
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 function formatNumber(
   value: number,
@@ -573,18 +564,19 @@ export default function InvoicesTable() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            disabled={!canWrite}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus size={18} />
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              <Plus size={18} />
 
-            {isArabic
-              ? "إنشاء فاتورة"
-              : "Create invoice"}
-          </button>
+              {isArabic
+                ? "إنشاء فاتورة"
+                : "Create invoice"}
+            </button>
+          ) : null}
         </div>
 
         {successMessage ? (
@@ -863,7 +855,7 @@ export default function InvoicesTable() {
                         </td>
 
                         <td className="px-5 py-4 text-sm font-semibold text-text-primary">
-                          {formatAmount(
+                          {formatMoney(
                             invoice.total_amount,
                             numberLocale,
                           )}
@@ -871,7 +863,7 @@ export default function InvoicesTable() {
 
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-text-primary">
-                            {formatAmount(
+                            {formatMoney(
                               invoice.vat_amount,
                               numberLocale,
                             )}
@@ -946,91 +938,94 @@ export default function InvoicesTable() {
                               )}
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void handleEmailInvoice(invoice)
-                              }
-                              disabled={
-                                !canWrite ||
-                                emailingInvoiceId !== null ||
-                                downloadingInvoiceId !== null
-                              }
-                              aria-label={
-                                isArabic
-                                  ? `إرسال ${invoice.invoice_number} بالبريد`
-                                  : `Email ${invoice.invoice_number}`
-                              }
-                              title={
-                                isArabic
-                                  ? "إرسال إلى بريد العميل"
-                                  : "Email customer"
-                              }
-                              className="flex size-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-success-soft hover:text-success disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              {emailingInvoiceId === invoice.id ? (
-                                <LoaderCircle
-                                  size={17}
-                                  className="animate-spin"
-                                />
-                              ) : (
-                                <Mail size={17} />
-                              )}
-                            </button>
+                            {canWrite ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleEmailInvoice(invoice)
+                                  }
+                                  disabled={
+                                    emailingInvoiceId !== null ||
+                                    downloadingInvoiceId !== null
+                                  }
+                                  aria-label={
+                                    isArabic
+                                      ? `إرسال ${invoice.invoice_number} بالبريد`
+                                      : `Email ${invoice.invoice_number}`
+                                  }
+                                  title={
+                                    isArabic
+                                      ? "إرسال إلى بريد العميل"
+                                      : "Email customer"
+                                  }
+                                  className="flex size-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-success-soft hover:text-success disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  {emailingInvoiceId === invoice.id ? (
+                                    <LoaderCircle
+                                      size={17}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <Mail size={17} />
+                                  )}
+                                </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openEditModal(
-                                  invoice,
-                                )
-                              }
-                              disabled={!canWrite || deleting}
-                              aria-label={
-                                isArabic
-                                  ? `تعديل ${invoice.invoice_number}`
-                                  : `Edit ${invoice.invoice_number}`
-                              }
-                              title={
-                                isArabic
-                                  ? `تعديل ${invoice.invoice_number}`
-                                  : `Edit ${invoice.invoice_number}`
-                              }
-                              className="flex size-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-primary-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              <Pencil
-                                size={17}
-                              />
-                            </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openEditModal(
+                                      invoice,
+                                    )
+                                  }
+                                  disabled={deleting}
+                                  aria-label={
+                                    isArabic
+                                      ? `تعديل ${invoice.invoice_number}`
+                                      : `Edit ${invoice.invoice_number}`
+                                  }
+                                  title={
+                                    isArabic
+                                      ? `تعديل ${invoice.invoice_number}`
+                                      : `Edit ${invoice.invoice_number}`
+                                  }
+                                  className="flex size-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-primary-soft hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  <Pencil
+                                    size={17}
+                                  />
+                                </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void handleDeleteInvoice(
-                                  invoice,
-                                )
-                              }
-                              disabled={!canWrite || deleting}
-                              aria-label={
-                                isArabic
-                                  ? `حذف ${invoice.invoice_number}`
-                                  : `Delete ${invoice.invoice_number}`
-                              }
-                              title={
-                                isArabic
-                                  ? `حذف ${invoice.invoice_number}`
-                                  : `Delete ${invoice.invoice_number}`
-                              }
-                              className="flex size-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              {deleting ? (
-                                <span className="size-4 animate-spin rounded-full border-2 border-border border-t-danger" />
-                              ) : (
-                                <Trash2
-                                  size={17}
-                                />
-                              )}
-                            </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleDeleteInvoice(
+                                      invoice,
+                                    )
+                                  }
+                                  disabled={deleting}
+                                  aria-label={
+                                    isArabic
+                                      ? `حذف ${invoice.invoice_number}`
+                                      : `Delete ${invoice.invoice_number}`
+                                  }
+                                  title={
+                                    isArabic
+                                      ? `حذف ${invoice.invoice_number}`
+                                      : `Delete ${invoice.invoice_number}`
+                                  }
+                                  className="flex size-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  {deleting ? (
+                                    <span className="size-4 animate-spin rounded-full border-2 border-border border-t-danger" />
+                                  ) : (
+                                    <Trash2
+                                      size={17}
+                                    />
+                                  )}
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         </td>
                       </tr>

@@ -1,7 +1,10 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.money import MAX_STANDARD_MONEY, MoneyDecimal
 
 
 SaleStatus = Literal["completed", "pending", "refunded", "cancelled"]
@@ -32,7 +35,7 @@ class SaleCreate(SaleInput):
     customer_id: str | None = None
     product_name: str = Field(min_length=1, max_length=200)
     quantity: int = Field(gt=0, le=1_000_000)
-    unit_price: float = Field(ge=0, le=1_000_000_000)
+    unit_price: MoneyDecimal = Field(ge=Decimal("0"), le=MAX_STANDARD_MONEY)
     status: SaleStatus = "completed"
     sale_date: str | None = None
 
@@ -41,7 +44,11 @@ class SaleUpdate(SaleInput):
     customer_id: str | None = None
     product_name: str | None = Field(default=None, min_length=1, max_length=200)
     quantity: int | None = Field(default=None, gt=0, le=1_000_000)
-    unit_price: float | None = Field(default=None, ge=0, le=1_000_000_000)
+    unit_price: MoneyDecimal | None = Field(
+        default=None,
+        ge=Decimal("0"),
+        le=MAX_STANDARD_MONEY,
+    )
     status: SaleStatus | None = None
     sale_date: str | None = None
 
@@ -51,8 +58,8 @@ class SaleResponse(BaseModel):
     customer_id: str | None = None
     product_name: str
     quantity: int
-    unit_price: float
-    total_amount: float
+    unit_price: MoneyDecimal
+    total_amount: MoneyDecimal
     status: str
     sale_date: str | None = None
     created_at: str | None = None

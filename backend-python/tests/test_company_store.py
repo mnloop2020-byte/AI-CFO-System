@@ -96,10 +96,10 @@ def test_store_merges_partial_financial_settings_with_existing_values(
     assert query.updated_payload["financial_settings"] == {
         "invoice_high_priority_days": 45,
         "invoice_critical_days": 60,
-        "high_amount_threshold": 10000.0,
-        "critical_amount_threshold": 50000.0,
-        "cash_reserve_threshold": 75000.0,
-        "large_expense_review_threshold": 15000.0,
+        "high_amount_threshold": "10000.00",
+        "critical_amount_threshold": "50000.00",
+        "cash_reserve_threshold": "75000.00",
+        "large_expense_review_threshold": "15000.00",
     }
     assert response.financial_settings.invoice_high_priority_days == 45
 

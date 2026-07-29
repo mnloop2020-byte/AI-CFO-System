@@ -1,4 +1,8 @@
 import type { FinancialSettings } from "@/lib/company";
+import {
+  compareMoney,
+  isNonNegativeMoney,
+} from "./money.ts";
 
 export type FinancialSettingsValidationCode =
   | "invalid_days"
@@ -29,7 +33,7 @@ export function validateFinancialSettings(
   ];
   if (
     amountValues.some(
-      (value) => !Number.isFinite(value) || value < 0,
+      (value) => !isNonNegativeMoney(value),
     )
   ) {
     return "invalid_amount";
@@ -42,8 +46,10 @@ export function validateFinancialSettings(
     return "invalid_day_order";
   }
   if (
-    settings.critical_amount_threshold <=
-    settings.high_amount_threshold
+    compareMoney(
+      settings.critical_amount_threshold,
+      settings.high_amount_threshold,
+    ) <= 0
   ) {
     return "invalid_amount_order";
   }

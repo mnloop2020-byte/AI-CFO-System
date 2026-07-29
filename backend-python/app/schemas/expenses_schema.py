@@ -1,6 +1,9 @@
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.money import MAX_STANDARD_MONEY, MoneyDecimal
 
 
 class ExpenseInput(BaseModel):
@@ -21,7 +24,7 @@ class ExpenseInput(BaseModel):
 
 class ExpenseCreate(ExpenseInput):
     category: str = Field(min_length=1, max_length=100)
-    amount: float = Field(gt=0, le=1_000_000_000)
+    amount: MoneyDecimal = Field(gt=Decimal("0"), le=MAX_STANDARD_MONEY)
     description: str | None = Field(default=None, max_length=4000)
     vendor: str | None = Field(default=None, max_length=200)
     expense_date: str | None = None
@@ -30,7 +33,11 @@ class ExpenseCreate(ExpenseInput):
 
 class ExpenseUpdate(ExpenseInput):
     category: str | None = Field(default=None, min_length=1, max_length=100)
-    amount: float | None = Field(default=None, gt=0, le=1_000_000_000)
+    amount: MoneyDecimal | None = Field(
+        default=None,
+        gt=Decimal("0"),
+        le=MAX_STANDARD_MONEY,
+    )
     description: str | None = Field(default=None, max_length=4000)
     vendor: str | None = Field(default=None, max_length=200)
     expense_date: str | None = None
@@ -40,7 +47,7 @@ class ExpenseUpdate(ExpenseInput):
 class ExpenseResponse(BaseModel):
     id: str
     category: str
-    amount: float
+    amount: MoneyDecimal
     description: str | None = None
     vendor: str | None = None
     expense_date: str | None = None

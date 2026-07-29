@@ -34,19 +34,10 @@ import {
   type CreateSaleInput,
   type Sale,
 } from "@/lib/sales";
+import { formatMoney } from "@/lib/money";
 
 const UNKNOWN_LOAD_ERROR =
   "Unable to load sales data.";
-
-function formatAmount(
-  value: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
 
 function formatDate(
   value: string | null | undefined,
@@ -414,18 +405,19 @@ export default function SalesTable() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateSaleModal}
-            disabled={!canWrite}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus size={18} />
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={openCreateSaleModal}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+            >
+              <Plus size={18} />
 
-            {isArabic
-              ? "تسجيل مبيعة"
-              : "Record sale"}
-          </button>
+              {isArabic
+                ? "تسجيل مبيعة"
+                : "Record sale"}
+            </button>
+          ) : null}
         </header>
 
         {successMessage ? (
@@ -635,11 +627,13 @@ export default function SalesTable() {
                     : "Status"}
                 </th>
 
-                <th className="w-28 px-5 py-3 text-right font-semibold">
-                  {isArabic
-                    ? "الإجراءات"
-                    : "Actions"}
-                </th>
+                {canWrite ? (
+                  <th className="w-28 px-5 py-3 text-right font-semibold">
+                    {isArabic
+                      ? "الإجراءات"
+                      : "Actions"}
+                  </th>
+                ) : null}
               </tr>
             </thead>
 
@@ -647,7 +641,7 @@ export default function SalesTable() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={canWrite ? 8 : 7}
                     className="px-5 py-14 text-center"
                   >
                     <div className="mx-auto size-8 animate-spin rounded-full border-2 border-primary-soft border-t-primary" />
@@ -713,14 +707,14 @@ export default function SalesTable() {
                     </td>
 
                     <td className="px-5 py-4 text-sm text-text-secondary">
-                      {formatAmount(
+                      {formatMoney(
                         sale.unit_price,
                         numberLocale,
                       )}
                     </td>
 
                     <td className="px-5 py-4 font-semibold text-text-primary">
-                      {formatAmount(
+                      {formatMoney(
                         sale.total_amount,
                         numberLocale,
                       )}
@@ -749,8 +743,9 @@ export default function SalesTable() {
                       </span>
                     </td>
 
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-1">
+                    {canWrite ? (
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
                           onClick={() =>
@@ -812,8 +807,9 @@ export default function SalesTable() {
                             }
                           />
                         </button>
-                      </div>
-                    </td>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
 
@@ -822,7 +818,7 @@ export default function SalesTable() {
               filteredSales.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={canWrite ? 8 : 7}
                     className="px-5 py-14 text-center"
                   >
                     <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary-soft text-primary">

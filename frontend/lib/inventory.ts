@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import type { MoneyString } from "@/lib/money";
 
 export type InventoryItem = {
   id: string;
@@ -6,8 +7,8 @@ export type InventoryItem = {
   sku: string;
   quantity: number;
   reorder_level: number;
-  cost_price: number;
-  selling_price: number;
+  cost_price: MoneyString;
+  selling_price: MoneyString;
   last_sold: string | null;
   created_at: string;
   updated_at: string;
@@ -18,8 +19,8 @@ export type CreateInventoryItemInput = {
   sku: string;
   quantity: number;
   reorder_level: number;
-  cost_price: number;
-  selling_price: number;
+  cost_price: MoneyString;
+  selling_price: MoneyString;
 };
 
 export type UpdateInventoryItemInput =

@@ -32,6 +32,7 @@ import {
   type CreateExpenseInput,
   type Expense,
 } from "@/lib/expenses";
+import { formatMoney } from "@/lib/money";
 
 type ReviewFilter =
   | "all"
@@ -40,16 +41,6 @@ type ReviewFilter =
 
 const UNKNOWN_LOAD_ERROR =
   "Unable to load expense records.";
-
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 function formatDate(
   date: string | null,
@@ -401,18 +392,19 @@ export default function ExpensesTable() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            disabled={!canWrite}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus size={18} />
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              <Plus size={18} />
 
-            {isArabic
-              ? "تسجيل مصروف"
-              : "Record expense"}
-          </button>
+              {isArabic
+                ? "تسجيل مصروف"
+                : "Record expense"}
+            </button>
+          ) : null}
         </div>
 
         {successMessage ? (
@@ -582,11 +574,13 @@ export default function ExpensesTable() {
                     : "Review status"}
                 </th>
 
-                <th className="px-5 py-3 text-right">
-                  {isArabic
-                    ? "الإجراءات"
-                    : "Actions"}
-                </th>
+                {canWrite ? (
+                  <th className="px-5 py-3 text-right">
+                    {isArabic
+                      ? "الإجراءات"
+                      : "Actions"}
+                  </th>
+                ) : null}
               </tr>
             </thead>
 
@@ -594,7 +588,7 @@ export default function ExpensesTable() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={canWrite ? 7 : 6}
                     className="px-5 py-12 text-center"
                   >
                     <div className="mx-auto size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
@@ -675,7 +669,7 @@ export default function ExpensesTable() {
                         </td>
 
                         <td className="px-5 py-4 text-sm font-semibold text-text-primary">
-                          {formatAmount(
+                          {formatMoney(
                             expense.amount,
                             numberLocale,
                           )}
@@ -709,8 +703,9 @@ export default function ExpensesTable() {
                           </span>
                         </td>
 
-                        <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-1">
+                        {canWrite ? (
+                          <td className="px-5 py-4">
+                            <div className="flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() =>
@@ -770,8 +765,9 @@ export default function ExpensesTable() {
                                 />
                               )}
                             </button>
-                          </div>
-                        </td>
+                            </div>
+                          </td>
+                        ) : null}
                       </tr>
                     );
                   },

@@ -84,13 +84,13 @@ def main() -> None:
                 "customer_id": created["customers"],
                 "product_name": f"{run_name} Sale",
                 "quantity": 2,
-                "unit_price": 15,
+                "unit_price": "15.00",
                 "status": "Completed",
                 "sale_date": datetime.now(timezone.utc).isoformat(),
             },
         )
         assert sale.status_code == 200, sale.text
-        assert sale.json()["total_amount"] == 30
+        assert sale.json()["total_amount"] == "30.00"
         created["sales"] = sale.json()["id"]
 
         expense = request(
@@ -98,7 +98,7 @@ def main() -> None:
             "/expenses",
             json={
                 "category": "Other",
-                "amount": 12.5,
+                "amount": "12.50",
                 "vendor": run_name,
                 "expense_date": datetime.now(timezone.utc).isoformat(),
                 "is_flagged": False,
@@ -115,8 +115,8 @@ def main() -> None:
                 "sku": run_name,
                 "quantity": 2,
                 "reorder_level": 2,
-                "cost_price": 10,
-                "selling_price": 15,
+                "cost_price": "10.00",
+                "selling_price": "15.00",
             },
         )
         assert inventory.status_code == 200, inventory.text
@@ -129,8 +129,8 @@ def main() -> None:
             json={
                 "customer_id": created["customers"],
                 "invoice_number": run_name,
-                "total_amount": 100,
-                "vat_amount": 15,
+                "total_amount": "100.00",
+                "vat_amount": "15.00",
                 "status": "unpaid",
                 "due_date": due_date,
             },
@@ -141,21 +141,21 @@ def main() -> None:
 
         updates = (
             ("customers", {"notes": "temporary integration check"}),
-            ("sales", {"quantity": 3, "unit_price": 20}),
-            ("expenses", {"amount": 13.5}),
+            ("sales", {"quantity": 3, "unit_price": "20.00"}),
+            ("expenses", {"amount": "13.50"}),
             ("inventory", {"quantity": 3}),
-            ("invoices", {"total_amount": 110, "vat_amount": 16.5}),
+            ("invoices", {"total_amount": "110.00", "vat_amount": "16.50"}),
         )
         for module, payload in updates:
             response = request("PATCH", f"/{module}/{created[module]}", json=payload)
             assert response.status_code == 200, response.text
             if module == "sales":
-                assert response.json()["total_amount"] == 60
+                assert response.json()["total_amount"] == "60.00"
 
         assert request(
             "POST",
             "/sales",
-            json={"product_name": "Invalid", "quantity": -1, "unit_price": 1},
+            json={"product_name": "Invalid", "quantity": -1, "unit_price": "1.00"},
         ).status_code == 422
         assert request(
             "POST",
@@ -170,8 +170,8 @@ def main() -> None:
                 "sku": run_name,
                 "quantity": 0,
                 "reorder_level": 0,
-                "cost_price": 0,
-                "selling_price": 0,
+                "cost_price": "0.00",
+                "selling_price": "0.00",
             },
         ).status_code == 409
         assert request(
@@ -179,8 +179,8 @@ def main() -> None:
             "/invoices",
             json={
                 "invoice_number": run_name,
-                "total_amount": 10,
-                "vat_amount": 1,
+                "total_amount": "10.00",
+                "vat_amount": "1.00",
             },
         ).status_code == 409
     finally:

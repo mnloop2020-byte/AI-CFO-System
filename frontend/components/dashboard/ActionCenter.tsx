@@ -9,16 +9,21 @@ import {
 import Link from "next/link";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import {
+  compareMoney,
+  formatMoney,
+  type MoneyString,
+} from "@/lib/money";
 
 type ActionCenterProps = {
   lowStockQuantity: number;
   reorderLevel: number;
-  flaggedExpenseAmount: number;
-  invoicedVat: number;
+  flaggedExpenseAmount: MoneyString;
+  invoicedVat: MoneyString;
 };
 
 function formatAmount(
-  amount: number,
+  amount: MoneyString,
   language: "en" | "ar",
 ) {
   const locale =
@@ -26,10 +31,7 @@ function formatAmount(
       ? "ar-SA-u-nu-latn"
       : "en-US";
 
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatMoney(amount, locale);
 }
 
 export default function ActionCenter({
@@ -43,6 +45,11 @@ export default function ActionCenter({
   const hasLowStock =
     reorderLevel > 0 &&
     lowStockQuantity <= reorderLevel;
+  const hasFlaggedExpense =
+    compareMoney(
+      flaggedExpenseAmount,
+      "0.00",
+    ) > 0;
 
   const actionItems = [
     {
@@ -87,7 +94,7 @@ export default function ActionCenter({
           : "Flagged expense for review",
 
       description:
-        flaggedExpenseAmount > 0
+        hasFlaggedExpense
           ? language === "ar"
             ? `${formatAmount(
                 flaggedExpenseAmount,
@@ -102,7 +109,7 @@ export default function ActionCenter({
             : "No expenses are currently flagged for review.",
 
       status:
-        flaggedExpenseAmount > 0
+        hasFlaggedExpense
           ? language === "ar"
             ? "مراجعة"
             : "Review"
@@ -114,12 +121,12 @@ export default function ActionCenter({
       icon: ShieldAlert,
 
       iconStyle:
-        flaggedExpenseAmount > 0
+        hasFlaggedExpense
           ? "bg-danger-soft text-danger"
           : "bg-success-soft text-success",
 
       statusStyle:
-        flaggedExpenseAmount > 0
+        hasFlaggedExpense
           ? "bg-danger-soft text-danger"
           : "bg-success-soft text-success",
     },

@@ -25,22 +25,16 @@ import {
   getInvoices,
   type Invoice,
 } from "@/lib/invoices";
+import {
+  addMoney,
+  formatMoney,
+} from "@/lib/money";
 
 const UNKNOWN_LOAD_ERROR =
   "Unable to load invoice metrics.";
 
 function normalizeStatus(status: string) {
   return status.trim().toLowerCase();
-}
-
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
 }
 
 function formatNumber(
@@ -162,13 +156,11 @@ export default function InvoicesPage() {
   );
 
   const invoiceSummary = useMemo(() => {
-    const totalInvoicedAmount =
-      invoices.reduce(
-        (total, invoice) =>
-          total +
-          Number(invoice.total_amount),
-        0,
-      );
+    const totalInvoicedAmount = addMoney(
+      invoices.map(
+        (invoice) => invoice.total_amount,
+      ),
+    );
 
     const outstandingInvoices =
       invoices.filter((invoice) => {
@@ -182,20 +174,17 @@ export default function InvoicesPage() {
         );
       });
 
-    const outstandingAmount =
-      outstandingInvoices.reduce(
-        (total, invoice) =>
-          total +
-          Number(invoice.total_amount),
-        0,
-      );
+    const outstandingAmount = addMoney(
+      outstandingInvoices.map(
+        (invoice) => invoice.total_amount,
+      ),
+    );
 
-    const totalInvoicedVat =
-      invoices.reduce(
-        (total, invoice) =>
-          total + Number(invoice.vat_amount),
-        0,
-      );
+    const totalInvoicedVat = addMoney(
+      invoices.map(
+        (invoice) => invoice.vat_amount,
+      ),
+    );
 
     return {
       invoiceCount: invoices.length,
@@ -234,7 +223,7 @@ export default function InvoicesPage() {
           : "Total Invoiced Amount",
         value: loading
           ? "—"
-          : formatAmount(
+          : formatMoney(
               invoiceSummary.totalInvoicedAmount,
               numberLocale,
             ),
@@ -250,7 +239,7 @@ export default function InvoicesPage() {
           : "Outstanding Unpaid",
         value: loading
           ? "—"
-          : formatAmount(
+          : formatMoney(
               invoiceSummary.outstandingAmount,
               numberLocale,
             ),
@@ -271,7 +260,7 @@ export default function InvoicesPage() {
           : "Invoiced VAT",
         value: loading
           ? "—"
-          : formatAmount(
+          : formatMoney(
               invoiceSummary.totalInvoicedVat,
               numberLocale,
             ),

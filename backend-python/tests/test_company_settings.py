@@ -117,7 +117,7 @@ def test_company_settings_rejects_invalid_values(field: str, value: object) -> N
         {"invoice_high_priority_days": 1.5},
         {"invoice_high_priority_days": "30"},
         {"high_amount_threshold": -1},
-        {"high_amount_threshold": "10000"},
+        {"high_amount_threshold": "not-money"},
         {"high_amount_threshold": float("nan")},
         {"high_amount_threshold": float("inf")},
         {

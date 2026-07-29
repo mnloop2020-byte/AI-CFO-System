@@ -19,6 +19,7 @@ import remarkGfm from "remark-gfm";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import Modal from "@/components/ui/Modal";
+import { usePermission } from "@/lib/auth/use-permission";
 import {
   createReportPdf,
   generateReport,
@@ -202,6 +203,7 @@ export default function ReportTemplates({
   onReportStored,
 }: ReportTemplatesProps) {
   const { language } = useLanguage();
+  const canWriteReports = usePermission("reports.write");
   const isArabic = language === "ar";
   const locale = isArabic ? "ar" : "en";
 
@@ -397,13 +399,21 @@ export default function ReportTemplates({
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => openReport(report)}
-                    className="w-full rounded-xl border border-primary bg-primary-soft px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white"
-                  >
-                    {isArabic ? "إنشاء التقرير" : "Generate report"}
-                  </button>
+                  {canWriteReports ? (
+                    <button
+                      type="button"
+                      onClick={() => openReport(report)}
+                      className="w-full rounded-xl border border-primary bg-primary-soft px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white"
+                    >
+                      {isArabic ? "إنشاء التقرير" : "Generate report"}
+                    </button>
+                  ) : (
+                    <p className="rounded-xl border border-border bg-surface-soft px-4 py-2.5 text-center text-sm text-text-secondary">
+                      {isArabic
+                        ? "عرض فقط — إنشاء التقارير يتطلب صلاحية كتابة"
+                        : "View only — report generation requires write access"}
+                    </p>
+                  )}
                 </div>
               </article>
             );

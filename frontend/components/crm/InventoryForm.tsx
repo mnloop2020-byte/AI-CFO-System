@@ -17,6 +17,14 @@ import {
   type CreateInventoryItemInput,
   type InventoryItem,
 } from "@/lib/inventory";
+import {
+  compareMoney,
+  formatMoney,
+  isNonNegativeMoney,
+  multiplyMoneyByInteger,
+  normalizeMoney,
+  subtractMoney,
+} from "@/lib/money";
 
 type InventoryFormProps = {
   onCancel: () => void;
@@ -30,16 +38,6 @@ type InventoryFormProps = {
 
 const inputClasses =
   "h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text-primary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary-soft disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70";
-
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 export default function InventoryForm({
   onCancel,
@@ -72,12 +70,12 @@ export default function InventoryForm({
     );
 
   const [costPrice, setCostPrice] = useState(
-    initialItem?.cost_price ?? 0,
+    initialItem?.cost_price ?? "0.00",
   );
 
   const [sellingPrice, setSellingPrice] =
     useState(
-      initialItem?.selling_price ?? 0,
+      initialItem?.selling_price ?? "0.00",
     );
 
   const [validationError, setValidationError] =
@@ -86,9 +84,10 @@ export default function InventoryForm({
   const isEditing = Boolean(initialItem);
 
   const calculatedValues = useMemo(() => {
-    const safeQuantity = Number.isFinite(quantity)
-      ? Math.max(quantity, 0)
-      : 0;
+    const safeQuantity =
+      Number.isSafeInteger(quantity)
+        ? Math.max(quantity, 0)
+        : 0;
 
     const safeReorderLevel = Number.isFinite(
       reorderLevel,
@@ -96,24 +95,30 @@ export default function InventoryForm({
       ? Math.max(reorderLevel, 0)
       : 0;
 
-    const safeCostPrice = Number.isFinite(
-      costPrice,
-    )
-      ? Math.max(costPrice, 0)
-      : 0;
+    const safeCostPrice =
+      isNonNegativeMoney(costPrice)
+        ? normalizeMoney(costPrice)
+        : "0.00";
 
-    const safeSellingPrice = Number.isFinite(
-      sellingPrice,
-    )
-      ? Math.max(sellingPrice, 0)
-      : 0;
+    const safeSellingPrice =
+      isNonNegativeMoney(sellingPrice)
+        ? normalizeMoney(sellingPrice)
+        : "0.00";
 
     const inventoryValue =
-      safeQuantity * safeCostPrice;
+      multiplyMoneyByInteger(
+        safeCostPrice,
+        safeQuantity,
+      );
 
     const potentialProfit =
-      safeQuantity *
-      (safeSellingPrice - safeCostPrice);
+      multiplyMoneyByInteger(
+        subtractMoney(
+          safeSellingPrice,
+          safeCostPrice,
+        ),
+        safeQuantity,
+      );
 
     let stockStatus = isArabic
       ? "متوفر في المخزون"
@@ -211,10 +216,7 @@ export default function InventoryForm({
       return;
     }
 
-    if (
-      !Number.isFinite(costPrice) ||
-      costPrice < 0
-    ) {
+    if (!isNonNegativeMoney(costPrice)) {
       setValidationError(
         isArabic
           ? "يجب أن يكون سعر التكلفة صفرًا أو أكثر."
@@ -224,10 +226,7 @@ export default function InventoryForm({
       return;
     }
 
-    if (
-      !Number.isFinite(sellingPrice) ||
-      sellingPrice < 0
-    ) {
+    if (!isNonNegativeMoney(sellingPrice)) {
       setValidationError(
         isArabic
           ? "يجب أن يكون سعر البيع صفرًا أو أكثر."
@@ -242,8 +241,9 @@ export default function InventoryForm({
       sku: normalizedSku,
       quantity,
       reorder_level: reorderLevel,
-      cost_price: costPrice,
-      selling_price: sellingPrice,
+      cost_price: normalizeMoney(costPrice),
+      selling_price:
+        normalizeMoney(sellingPrice),
     });
   }
 
@@ -357,9 +357,7 @@ export default function InventoryForm({
             type="number"
             value={costPrice}
             onChange={(event) =>
-              setCostPrice(
-                Number(event.target.value),
-              )
+              setCostPrice(event.target.value)
             }
             required
             min={0}
@@ -382,7 +380,7 @@ export default function InventoryForm({
             value={sellingPrice}
             onChange={(event) =>
               setSellingPrice(
-                Number(event.target.value),
+                event.target.value,
               )
             }
             required
@@ -418,7 +416,7 @@ export default function InventoryForm({
           </p>
 
           <p className="mt-2 font-semibold text-text-primary">
-            {formatAmount(
+            {formatMoney(
               calculatedValues.inventoryValue,
               numberLocale,
             )}
@@ -434,12 +432,15 @@ export default function InventoryForm({
 
           <p
             className={`mt-2 font-semibold ${
-              calculatedValues.potentialProfit < 0
+              compareMoney(
+                calculatedValues.potentialProfit,
+                "0.00",
+              ) < 0
                 ? "text-danger"
                 : "text-text-primary"
             }`}
           >
-            {formatAmount(
+            {formatMoney(
               calculatedValues.potentialProfit,
               numberLocale,
             )}

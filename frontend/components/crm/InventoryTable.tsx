@@ -31,6 +31,7 @@ import {
   type CreateInventoryItemInput,
   type InventoryItem,
 } from "@/lib/inventory";
+import { formatMoney } from "@/lib/money";
 
 type StockFilter =
   | "all"
@@ -48,16 +49,6 @@ type StockStatus = {
 
 const UNKNOWN_LOAD_ERROR =
   "Unable to load inventory records.";
-
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 function formatNumber(
   value: number,
@@ -442,18 +433,19 @@ export default function InventoryTable() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            disabled={!canWrite}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus size={18} />
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              <Plus size={18} />
 
-            {isArabic
-              ? "إضافة منتج"
-              : "Add product"}
-          </button>
+              {isArabic
+                ? "إضافة منتج"
+                : "Add product"}
+            </button>
+          ) : null}
         </div>
 
         {successMessage ? (
@@ -630,11 +622,13 @@ export default function InventoryTable() {
                     : "Status"}
                 </th>
 
-                <th className="px-5 py-3 text-right">
-                  {isArabic
-                    ? "الإجراءات"
-                    : "Actions"}
-                </th>
+                {canWrite ? (
+                  <th className="px-5 py-3 text-right">
+                    {isArabic
+                      ? "الإجراءات"
+                      : "Actions"}
+                  </th>
+                ) : null}
               </tr>
             </thead>
 
@@ -642,7 +636,7 @@ export default function InventoryTable() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={canWrite ? 8 : 7}
                     className="px-5 py-12 text-center"
                   >
                     <div className="mx-auto size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
@@ -735,14 +729,14 @@ export default function InventoryTable() {
                       </td>
 
                       <td className="px-5 py-4 text-sm text-text-secondary">
-                        {formatAmount(
+                        {formatMoney(
                           item.cost_price,
                           numberLocale,
                         )}
                       </td>
 
                       <td className="px-5 py-4 text-sm font-semibold text-text-primary">
-                        {formatAmount(
+                        {formatMoney(
                           item.selling_price,
                           numberLocale,
                         )}
@@ -766,8 +760,9 @@ export default function InventoryTable() {
                         </span>
                       </td>
 
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-1">
+                      {canWrite ? (
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
                             onClick={() =>
@@ -815,8 +810,9 @@ export default function InventoryTable() {
                               <Trash2 size={17} />
                             )}
                           </button>
-                        </div>
-                      </td>
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}

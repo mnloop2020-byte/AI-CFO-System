@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from app.money import parse_money
+
 
 _NUMBER_PATTERN = re.compile(r"(?<![\w-])-?\d[\d,]*(?:\.\d+)?")
 _CURRENCY_MARKERS = ("$", "€", "£", "¥", " USD", " EUR", " SAR", " TRY")
@@ -295,7 +297,7 @@ def _format_public_value(value: Any, is_arabic: bool) -> str:
         if is_arabic:
             return "نعم" if value else "لا"
         return "Yes" if value else "No"
-    if isinstance(value, float):
+    if isinstance(value, (float, Decimal)):
         return f"{value:,.2f}"
     return str(value)
 
@@ -415,9 +417,12 @@ def _get_mapping(value: Any) -> dict[str, Any]:
 
 
 def _format_summary_amount(value: Any, currency: Any) -> str | None:
-    if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+    if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
         return None
-    formatted = f"{Decimal(str(value)):,.2f}"
+    try:
+        formatted = f"{parse_money(value):,.2f}"
+    except ValueError:
+        return None
     if isinstance(currency, str) and currency.strip():
         return f"{formatted} {currency.strip()}"
     return formatted

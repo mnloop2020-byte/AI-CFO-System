@@ -4,6 +4,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
+from app.money import serialize_decimal_values
 from app.schemas.action_schema import (
     FinancialActionDetailResponse,
     FinancialActionEventResponse,
@@ -119,7 +120,7 @@ def create_financial_action(payload: dict[str, Any]) -> FinancialActionResponse:
     response = (
         get_supabase_client()
         .table("financial_actions")
-        .insert(payload)
+        .insert(serialize_decimal_values(payload))
         .execute()
     )
     if not response.data:
@@ -134,7 +135,7 @@ def update_financial_action(
     response = (
         get_supabase_client()
         .table("financial_actions")
-        .update(payload)
+        .update(serialize_decimal_values(payload))
         .eq("id", str(action_id))
         .execute()
     )

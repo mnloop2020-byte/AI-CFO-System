@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from app.money import money_to_string, multiply_money, parse_money
 from app.schemas.sales_schema import SaleCreate, SaleResponse , SaleUpdate 
 from app.services.supabase_client import get_supabase_client
 from app.services.store_errors import RecordNotFoundError
@@ -8,11 +9,11 @@ from app.services.store_errors import RecordNotFoundError
 def create_sale(sale: SaleCreate) -> SaleResponse:
     supabase = get_supabase_client()
 
-    total_amount = sale.quantity * sale.unit_price
+    total_amount = multiply_money(sale.unit_price, sale.quantity)
     # Calculate the total sale amount.
 
-    sale_data = sale.model_dump()
-    sale_data["total_amount"] = total_amount
+    sale_data = sale.model_dump(mode="json")
+    sale_data["total_amount"] = money_to_string(total_amount)
     # Add total_amount before saving to Supabase.
 
     response = (
@@ -29,8 +30,8 @@ def create_sale(sale: SaleCreate) -> SaleResponse:
         customer_id=row.get("customer_id"),
         product_name=row["product_name"],
         quantity=row["quantity"],
-        unit_price=float(row["unit_price"]),
-        total_amount=float(row["total_amount"]),
+        unit_price=parse_money(row["unit_price"]),
+        total_amount=parse_money(row["total_amount"]),
         status=row["status"],
         sale_date=row.get("sale_date"),
         created_at=row.get("created_at"),
@@ -58,8 +59,8 @@ def get_sales() -> list[SaleResponse]:
             customer_id=row.get("customer_id"),
             product_name=row["product_name"],
             quantity=row["quantity"],
-            unit_price=float(row["unit_price"]),
-            total_amount=float(row["total_amount"]),
+            unit_price=parse_money(row["unit_price"]),
+            total_amount=parse_money(row["total_amount"]),
             status=row["status"],
             sale_date=row.get("sale_date"),
             created_at=row.get("created_at"),
@@ -89,14 +90,16 @@ def update_sale(
 
     old_sale = old_response.data[0]
 
-    update_data = sale.model_dump(exclude_none=True)
+    update_data = sale.model_dump(mode="json", exclude_none=True)
     # Keep only the fields the user wants to update.
 
     quantity = update_data.get("quantity", old_sale["quantity"])
-    unit_price = update_data.get("unit_price", old_sale["unit_price"])
+    unit_price = parse_money(update_data.get("unit_price", old_sale["unit_price"]))
     # Use new values if provided, otherwise use old values.
 
-    update_data["total_amount"] = quantity * float(unit_price)
+    update_data["total_amount"] = money_to_string(
+        multiply_money(unit_price, quantity)
+    )
     # Recalculate total_amount after update.
 
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -121,8 +124,8 @@ def update_sale(
         customer_id=row.get("customer_id"),
         product_name=row["product_name"],
         quantity=row["quantity"],
-        unit_price=float(row["unit_price"]),
-        total_amount=float(row["total_amount"]),
+        unit_price=parse_money(row["unit_price"]),
+        total_amount=parse_money(row["total_amount"]),
         status=row["status"],
         sale_date=row.get("sale_date"),
         created_at=row.get("created_at"),

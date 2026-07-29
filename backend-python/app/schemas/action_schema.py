@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime
-from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.money import MoneyDecimal
 
 
 ActionType = Literal["overdue_invoice", "low_inventory", "expense_review"]
@@ -33,7 +34,7 @@ class FinancialActionResponse(BaseModel):
     description_en: str
     description_ar: str
     severity: ActionSeverity
-    financial_impact: Decimal | None = None
+    financial_impact: MoneyDecimal | None = None
     currency: str | None = None
     source_type: Literal["invoice", "inventory", "expense"]
     source_id: UUID
@@ -145,11 +146,11 @@ class ActionExecutionResponse(BaseModel):
 class ActionMetricsResponse(BaseModel):
     open_actions: int
     completed_actions: int
-    linked_financial_value: Decimal
-    open_financial_value: Decimal
+    linked_financial_value: MoneyDecimal
+    open_financial_value: MoneyDecimal
     overdue_invoice_actions: int
     followed_up_invoices: int
-    proven_collected_amount: Decimal | None
+    proven_collected_amount: MoneyDecimal | None
     collection_attribution_note: str
     average_days_overdue: float | None
     low_inventory_actions: int

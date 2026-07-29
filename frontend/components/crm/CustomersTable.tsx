@@ -358,20 +358,21 @@ export default function CustomersTable() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={
-              openCreateCustomerModal
-            }
-            disabled={!canWrite}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus size={18} />
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={
+                openCreateCustomerModal
+              }
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+            >
+              <Plus size={18} />
 
-            {language === "ar"
-              ? "إضافة عميل"
-              : "Add customer"}
-          </button>
+              {language === "ar"
+                ? "إضافة عميل"
+                : "Add customer"}
+            </button>
+          ) : null}
         </header>
 
         {successMessage ? (
@@ -522,11 +523,13 @@ export default function CustomersTable() {
                     : "Status"}
                 </th>
 
-                <th className="w-28 px-5 py-3 text-end font-semibold">
-                  {language === "ar"
-                    ? "الإجراءات"
-                    : "Actions"}
-                </th>
+                {canWrite ? (
+                  <th className="w-28 px-5 py-3 text-end font-semibold">
+                    {language === "ar"
+                      ? "الإجراءات"
+                      : "Actions"}
+                  </th>
+                ) : null}
               </tr>
             </thead>
 
@@ -534,7 +537,7 @@ export default function CustomersTable() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={canWrite ? 6 : 5}
                     className="px-5 py-14 text-center"
                   >
                     <div className="mx-auto size-8 animate-spin rounded-full border-2 border-primary-soft border-t-primary" />
@@ -649,8 +652,9 @@ export default function CustomersTable() {
                         </span>
                       </td>
 
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-1">
+                      {canWrite ? (
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
                             onClick={() =>
@@ -714,8 +718,9 @@ export default function CustomersTable() {
                               }
                             />
                           </button>
-                        </div>
-                      </td>
+                          </div>
+                        </td>
+                      ) : null}
                     </tr>
                   ),
                 )}
@@ -726,7 +731,7 @@ export default function CustomersTable() {
                 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={canWrite ? 6 : 5}
                     className="px-5 py-14 text-center"
                   >
                     <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary-soft text-primary">

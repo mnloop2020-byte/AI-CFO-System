@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from app.money import parse_money
 from app.schemas.inventory_schema import (
     InventoryCreate,
     InventoryResponse,
@@ -35,7 +36,7 @@ def create_inventory_item(item: InventoryCreate) -> InventoryResponse:
     response = (
         supabase
         .table("inventory")
-        .insert(item.model_dump())
+        .insert(item.model_dump(mode="json"))
         .execute()
     )
 
@@ -47,8 +48,8 @@ def create_inventory_item(item: InventoryCreate) -> InventoryResponse:
         sku=row.get("sku"),
         quantity=row["quantity"],
         reorder_level=row["reorder_level"],
-        cost_price=float(row["cost_price"]),
-        selling_price=float(row["selling_price"]),
+        cost_price=parse_money(row["cost_price"]),
+        selling_price=parse_money(row["selling_price"]),
         last_sold=row.get("last_sold"),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
@@ -76,8 +77,8 @@ def get_inventory_items() -> list[InventoryResponse]:
             sku=row.get("sku"),
             quantity=row["quantity"],
             reorder_level=row["reorder_level"],
-            cost_price=float(row["cost_price"]),
-            selling_price=float(row["selling_price"]),
+            cost_price=parse_money(row["cost_price"]),
+            selling_price=parse_money(row["selling_price"]),
             last_sold=row.get("last_sold"),
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),
@@ -95,7 +96,7 @@ def update_inventory_item(
     if item.sku is not None:
         _ensure_unique_sku(item.sku, excluding_id=item_id)
 
-    update_data = item.model_dump(exclude_none=True)
+    update_data = item.model_dump(mode="json", exclude_none=True)
     # Keep only the fields the user wants to update.
 
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -121,8 +122,8 @@ def update_inventory_item(
         sku=row.get("sku"),
         quantity=row["quantity"],
         reorder_level=row["reorder_level"],
-        cost_price=float(row["cost_price"]),
-        selling_price=float(row["selling_price"]),
+        cost_price=parse_money(row["cost_price"]),
+        selling_price=parse_money(row["selling_price"]),
         last_sold=row.get("last_sold"),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
@@ -184,8 +185,8 @@ def get_low_inventory_items() -> list[InventoryResponse]:
             sku=row.get("sku"),
             quantity=row["quantity"],
             reorder_level=row["reorder_level"],
-            cost_price=float(row["cost_price"]),
-            selling_price=float(row["selling_price"]),
+            cost_price=parse_money(row["cost_price"]),
+            selling_price=parse_money(row["selling_price"]),
             last_sold=row.get("last_sold"),
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),

@@ -1,4 +1,8 @@
+from decimal import Decimal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.money import MAX_STANDARD_MONEY, MoneyDecimal
 
 
 class InventoryInput(BaseModel):
@@ -19,8 +23,16 @@ class InventoryCreate(InventoryInput):
     sku: str | None = Field(default=None, max_length=100)
     quantity: int = Field(default=0, ge=0, le=1_000_000_000)
     reorder_level: int = Field(default=5, ge=0, le=1_000_000_000)
-    cost_price: float = Field(default=0, ge=0, le=1_000_000_000)
-    selling_price: float = Field(default=0, ge=0, le=1_000_000_000)
+    cost_price: MoneyDecimal = Field(
+        default=Decimal("0.00"),
+        ge=Decimal("0"),
+        le=MAX_STANDARD_MONEY,
+    )
+    selling_price: MoneyDecimal = Field(
+        default=Decimal("0.00"),
+        ge=Decimal("0"),
+        le=MAX_STANDARD_MONEY,
+    )
 
 
 class InventoryUpdate(InventoryInput):
@@ -28,8 +40,16 @@ class InventoryUpdate(InventoryInput):
     sku: str | None = Field(default=None, max_length=100)
     quantity: int | None = Field(default=None, ge=0, le=1_000_000_000)
     reorder_level: int | None = Field(default=None, ge=0, le=1_000_000_000)
-    cost_price: float | None = Field(default=None, ge=0, le=1_000_000_000)
-    selling_price: float | None = Field(default=None, ge=0, le=1_000_000_000)
+    cost_price: MoneyDecimal | None = Field(
+        default=None,
+        ge=Decimal("0"),
+        le=MAX_STANDARD_MONEY,
+    )
+    selling_price: MoneyDecimal | None = Field(
+        default=None,
+        ge=Decimal("0"),
+        le=MAX_STANDARD_MONEY,
+    )
 
 
 class InventoryResponse(BaseModel):
@@ -38,8 +58,8 @@ class InventoryResponse(BaseModel):
     sku: str | None = None
     quantity: int
     reorder_level: int
-    cost_price: float
-    selling_price: float
+    cost_price: MoneyDecimal
+    selling_price: MoneyDecimal
     last_sold: str | None = None
     created_at: str | None = None
     updated_at: str | None = None

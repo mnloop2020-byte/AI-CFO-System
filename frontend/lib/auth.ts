@@ -34,8 +34,46 @@ export type CreatedCompanyInvitation = CompanyInvitation & {
   acceptance_path: string;
 };
 
+const AUTH_ME_CACHE_MS = 15_000;
+
+let cachedAuthMe: {
+  identity: AuthMe;
+  expiresAt: number;
+} | null = null;
+
+let authMeRequest: Promise<AuthMe> | null = null;
+
+export function clearAuthMeCache() {
+  cachedAuthMe = null;
+  authMeRequest = null;
+}
+
 export function getAuthMe() {
-  return api.get<AuthMe>("/auth/me");
+  if (
+    cachedAuthMe &&
+    cachedAuthMe.expiresAt > Date.now()
+  ) {
+    return Promise.resolve(cachedAuthMe.identity);
+  }
+
+  if (authMeRequest) {
+    return authMeRequest;
+  }
+
+  authMeRequest = api
+    .get<AuthMe>("/auth/me")
+    .then((identity) => {
+      cachedAuthMe = {
+        identity,
+        expiresAt: Date.now() + AUTH_ME_CACHE_MS,
+      };
+      return identity;
+    })
+    .finally(() => {
+      authMeRequest = null;
+    });
+
+  return authMeRequest;
 }
 
 export function getCompanyMembers() {

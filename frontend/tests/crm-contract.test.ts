@@ -19,7 +19,7 @@ test("all five CRM clients use the authenticated shared API client", () => {
   assert.match(source("lib/api.ts"), /Authorization.*Bearer/);
 });
 
-test("all five CRUD tables derive write controls from auth permissions", () => {
+test("all five CRUD tables hide write controls without financial.write", () => {
   const tables = [
     "CustomersTable",
     "SalesTable",
@@ -31,17 +31,33 @@ test("all five CRUD tables derive write controls from auth permissions", () => {
   for (const table of tables) {
     const contents = source(`components/crm/${table}.tsx`);
     assert.match(contents, /usePermission\("financial\.write"\)/);
-    assert.match(contents, /disabled=\{!canWrite/);
+    assert.match(contents, /\{canWrite \? \(/);
   }
+
+  const invoices = source("components/crm/InvoicesTable.tsx");
+  assert.match(invoices, /handleDownloadInvoice/);
+  assert.match(invoices, /\{canWrite \? \(\s*<>/);
 });
 
-test("financial forms retain client-side numeric validation", () => {
+test("financial forms validate money without JavaScript number coercion", () => {
   assert.match(source("components/crm/SaleForm.tsx"), /quantity < 1/);
-  assert.match(source("components/crm/SaleForm.tsx"), /unitPrice < 0/);
-  assert.match(source("components/crm/ExpenseForm.tsx"), /amount <= 0/);
+  assert.match(source("components/crm/SaleForm.tsx"), /isNonNegativeMoney\(unitPrice\)/);
+  assert.match(source("components/crm/ExpenseForm.tsx"), /isPositiveMoney\(amount\)/);
   assert.match(source("components/crm/InventoryForm.tsx"), /quantity < 0/);
-  assert.match(source("components/crm/InvoiceForm.tsx"), /totalAmount < 0/);
-  assert.match(source("components/crm/InvoiceForm.tsx"), /vatAmount > totalAmount/);
+  assert.match(source("components/crm/InvoiceForm.tsx"), /isNonNegativeMoney\(totalAmount\)/);
+  assert.match(source("components/crm/InvoiceForm.tsx"), /compareMoney\(vatAmount, totalAmount\)/);
+
+  for (const form of [
+    "SaleForm",
+    "ExpenseForm",
+    "InventoryForm",
+    "InvoiceForm",
+  ]) {
+    assert.doesNotMatch(
+      source(`components/crm/${form}.tsx`),
+      /Number\(event\.target\.value\)[\s\S]{0,80}(amount|price)/i,
+    );
+  }
 });
 
 test("invoice input never sends legacy file URLs", () => {

@@ -19,6 +19,13 @@ import {
   type CreateInvoiceInput,
   type Invoice,
 } from "@/lib/invoices";
+import {
+  compareMoney,
+  formatMoney,
+  isNonNegativeMoney,
+  normalizeMoney,
+  percentageOfMoney,
+} from "@/lib/money";
 
 type InvoiceFormProps = {
   onCancel: () => void;
@@ -47,16 +54,6 @@ function getInitialDate(date: string | null) {
   }
 
   return parsedDate.toISOString().slice(0, 10);
-}
-
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
 }
 
 function formatStatus(
@@ -121,12 +118,13 @@ export default function InvoiceForm({
 
   const [totalAmount, setTotalAmount] =
     useState(
-      initialInvoice?.total_amount ?? 0,
+      initialInvoice?.total_amount ??
+        "0.00",
     );
 
   const [vatAmount, setVatAmount] =
     useState(
-      initialInvoice?.vat_amount ?? 0,
+      initialInvoice?.vat_amount ?? "0.00",
     );
 
   const [dueDate, setDueDate] = useState(
@@ -149,21 +147,24 @@ export default function InvoiceForm({
   const isEditing = Boolean(initialInvoice);
 
   const calculations = useMemo(() => {
-    const safeTotal = Number.isFinite(totalAmount)
-      ? Math.max(totalAmount, 0)
-      : 0;
+    const safeTotal =
+      isNonNegativeMoney(totalAmount)
+        ? normalizeMoney(totalAmount)
+        : "0.00";
 
-    const safeVat = Number.isFinite(vatAmount)
-      ? Math.max(vatAmount, 0)
-      : 0;
+    const safeVat =
+      isNonNegativeMoney(vatAmount)
+        ? normalizeMoney(vatAmount)
+        : "0.00";
 
     const vatPercentage =
-      safeTotal > 0
-        ? (safeVat / safeTotal) * 100
-        : 0;
+      percentageOfMoney(
+        safeVat,
+        safeTotal,
+      );
 
     const outstandingAmount =
-      status === "paid" ? 0 : safeTotal;
+      status === "paid" ? "0.00" : safeTotal;
 
     return {
       vatPercentage,
@@ -190,10 +191,7 @@ export default function InvoiceForm({
       return;
     }
 
-    if (
-      !Number.isFinite(totalAmount) ||
-      totalAmount < 0
-    ) {
+    if (!isNonNegativeMoney(totalAmount)) {
       setValidationError(
         isArabic
           ? "يجب أن يكون المبلغ الإجمالي صفرًا أو أكثر."
@@ -203,10 +201,7 @@ export default function InvoiceForm({
       return;
     }
 
-    if (
-      !Number.isFinite(vatAmount) ||
-      vatAmount < 0
-    ) {
+    if (!isNonNegativeMoney(vatAmount)) {
       setValidationError(
         isArabic
           ? "يجب أن يكون مبلغ الضريبة صفرًا أو أكثر."
@@ -216,7 +211,10 @@ export default function InvoiceForm({
       return;
     }
 
-    if (vatAmount > totalAmount) {
+    if (
+      compareMoney(vatAmount, totalAmount) >
+      0
+    ) {
       setValidationError(
         isArabic
           ? "لا يمكن أن يكون مبلغ الضريبة أكبر من إجمالي مبلغ الفاتورة."
@@ -229,8 +227,9 @@ export default function InvoiceForm({
     await onSave({
       invoice_number: normalizedInvoiceNumber,
       customer_id: customerId || null,
-      total_amount: totalAmount,
-      vat_amount: vatAmount,
+      total_amount:
+        normalizeMoney(totalAmount),
+      vat_amount: normalizeMoney(vatAmount),
       status,
       due_date: dueDate
         ? new Date(
@@ -316,7 +315,7 @@ export default function InvoiceForm({
             value={totalAmount}
             onChange={(event) =>
               setTotalAmount(
-                Number(event.target.value),
+                event.target.value,
               )
             }
             required
@@ -339,9 +338,7 @@ export default function InvoiceForm({
             type="number"
             value={vatAmount}
             onChange={(event) =>
-              setVatAmount(
-                Number(event.target.value),
-              )
+              setVatAmount(event.target.value)
             }
             required
             min={0}
@@ -431,7 +428,7 @@ export default function InvoiceForm({
           </p>
 
           <p className="mt-2 font-semibold text-text-primary">
-            {formatAmount(
+            {formatMoney(
               calculations.vatPercentage,
               numberLocale,
             )}
@@ -447,7 +444,7 @@ export default function InvoiceForm({
           </p>
 
           <p className="mt-2 font-semibold text-text-primary">
-            {formatAmount(
+            {formatMoney(
               calculations.outstandingAmount,
               numberLocale,
             )}

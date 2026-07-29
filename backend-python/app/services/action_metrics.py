@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from app.money import sum_money
 from app.schemas.action_schema import ActionMetricsResponse, FinancialActionResponse
 
 
@@ -26,10 +27,10 @@ def calculate_action_metrics(
     return ActionMetricsResponse(
         open_actions=len(open_actions),
         completed_actions=len(completed),
-        linked_financial_value=sum(
+        linked_financial_value=sum_money(
             (action.financial_impact or Decimal("0")) for action in actions
         ),
-        open_financial_value=sum(
+        open_financial_value=sum_money(
             (action.financial_impact or Decimal("0")) for action in open_actions
         ),
         overdue_invoice_actions=sum(

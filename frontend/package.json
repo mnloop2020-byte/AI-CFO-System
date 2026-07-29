@@ -14,13 +14,14 @@
     "test:crm": "node --test tests/crm-contract.test.ts",
     "test:invoice-delivery": "node --test tests/invoice-delivery-contract.test.ts",
     "test:language": "node --test tests/language-provider.test.ts",
-    "test": "npm run test:chat && npm run test:company && npm run test:profile && npm run test:auth && npm run test:crm && npm run test:invoice-delivery && npm run test:language"
+    "test:money": "node --test tests/money.test.ts",
+    "test": "npm run test:chat && npm run test:company && npm run test:profile && npm run test:auth && npm run test:crm && npm run test:invoice-delivery && npm run test:language && npm run test:money"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
     "lucide-react": "^0.541.0",
-    "next": "^15.0.0",
+    "next": "15.5.21",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
@@ -32,8 +33,12 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.5.0",
-    "postcss": "^8.5.15",
+    "postcss": "8.5.18",
     "tailwindcss": "^4.3.1",
     "typescript": "^5.0.0"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "sharp": "0.35.3"
   }
 }

@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { usePermission } from "@/lib/auth/use-permission";
 
 type SidebarContentProps = {
   mobile?: boolean;
@@ -40,6 +41,7 @@ function SidebarContent({
     language,
     t,
   } = useLanguage();
+  const canViewMembers = usePermission("members.read");
 
   const navigationGroups = [
     {
@@ -116,14 +118,18 @@ function SidebarContent({
     {
       title: t("system"),
       items: [
-        {
-          label:
-            language === "ar"
-              ? "الأعضاء والدعوات"
-              : "Members & invitations",
-          href: "/members",
-          icon: Users,
-        },
+        ...(canViewMembers
+          ? [
+              {
+                label:
+                  language === "ar"
+                    ? "الأعضاء والدعوات"
+                    : "Members & invitations",
+                href: "/members",
+                icon: Users,
+              },
+            ]
+          : []),
         {
           label: t("settings"),
           href: "/settings",

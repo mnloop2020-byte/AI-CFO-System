@@ -30,7 +30,7 @@ def get_fraud_risk_summary(
     for expense in expenses:
         key = (
             expense.category.lower(),
-            round(float(expense.amount), 2),
+            expense.amount,
             (expense.vendor or "").lower(),
             expense.expense_date or "",
             (expense.description or "").lower(),

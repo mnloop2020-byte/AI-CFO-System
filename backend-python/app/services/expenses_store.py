@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from app.money import parse_money
 from app.schemas.expenses_schema import ExpenseCreate, ExpenseResponse ,ExpenseUpdate
 from app.services.supabase_client import get_supabase_client
 from app.services.store_errors import RecordNotFoundError
@@ -11,7 +12,7 @@ def create_expense(expense: ExpenseCreate) -> ExpenseResponse:
     response = (
         supabase
         .table("expenses")
-        .insert(expense.model_dump())
+        .insert(expense.model_dump(mode="json"))
         .execute()
     )
 
@@ -20,7 +21,7 @@ def create_expense(expense: ExpenseCreate) -> ExpenseResponse:
     return ExpenseResponse(
         id=row["id"],
         category=row["category"],
-        amount=float(row["amount"]),
+        amount=parse_money(row["amount"]),
         description=row.get("description"),
         vendor=row.get("vendor"),
         expense_date=row.get("expense_date"),
@@ -48,7 +49,7 @@ def get_expenses() -> list[ExpenseResponse]:
         ExpenseResponse(
             id=row["id"],
             category=row["category"],
-            amount=float(row["amount"]),
+            amount=parse_money(row["amount"]),
             description=row.get("description"),
             vendor=row.get("vendor"),
             expense_date=row.get("expense_date"),
@@ -66,7 +67,7 @@ def update_expense(
 ) -> ExpenseResponse:
     supabase = get_supabase_client()
 
-    update_data = expense.model_dump(exclude_none=True)
+    update_data = expense.model_dump(mode="json", exclude_none=True)
     # Keep only the fields the user wants to update.
 
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -89,7 +90,7 @@ def update_expense(
     return ExpenseResponse(
         id=row["id"],
         category=row["category"],
-        amount=float(row["amount"]),
+        amount=parse_money(row["amount"]),
         description=row.get("description"),
         vendor=row.get("vendor"),
         expense_date=row.get("expense_date"),

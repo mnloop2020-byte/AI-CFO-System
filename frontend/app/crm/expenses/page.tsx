@@ -25,19 +25,14 @@ import {
   getExpenses,
   type Expense,
 } from "@/lib/expenses";
+import {
+  addMoney,
+  compareMoney,
+  formatMoney,
+} from "@/lib/money";
 
 const UNKNOWN_LOAD_ERROR =
   "Unable to load expense metrics.";
-
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 export default function ExpensesPage() {
   const { language } = useLanguage();
@@ -91,10 +86,10 @@ export default function ExpensesPage() {
   );
 
   const expenseSummary = useMemo(() => {
-    const totalExpenses = expenses.reduce(
-      (total, expense) =>
-        total + Number(expense.amount),
-      0,
+    const totalExpenses = addMoney(
+      expenses.map(
+        (expense) => expense.amount,
+      ),
     );
 
     const flaggedExpenses = expenses.filter(
@@ -105,8 +100,10 @@ export default function ExpensesPage() {
       expenses.length > 0
         ? expenses.reduce(
             (largest, expense) =>
-              Number(expense.amount) >
-              Number(largest.amount)
+              compareMoney(
+                expense.amount,
+                largest.amount,
+              ) > 0
                 ? expense
                 : largest,
           )
@@ -137,7 +134,7 @@ export default function ExpensesPage() {
           : "Total Expenses",
         value: loading
           ? "—"
-          : formatAmount(
+          : formatMoney(
               expenseSummary.totalExpenses,
               numberLocale,
             ),
@@ -197,13 +194,13 @@ export default function ExpensesPage() {
         value: loading
           ? "—"
           : expenseSummary.largestExpense
-            ? formatAmount(
+            ? formatMoney(
                 expenseSummary.largestExpense
                   .amount,
                 numberLocale,
               )
-            : formatAmount(
-                0,
+            : formatMoney(
+                "0.00",
                 numberLocale,
               ),
         description:

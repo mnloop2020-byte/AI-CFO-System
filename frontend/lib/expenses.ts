@@ -1,9 +1,10 @@
 import { api } from "@/lib/api";
+import type { MoneyString } from "@/lib/money";
 
 export type Expense = {
   id: string;
   category: string;
-  amount: number;
+  amount: MoneyString;
   description: string | null;
   vendor: string | null;
   expense_date: string | null;
@@ -14,7 +15,7 @@ export type Expense = {
 
 export type CreateExpenseInput = {
   category: string;
-  amount: number;
+  amount: MoneyString;
   description?: string | null;
   vendor?: string | null;
   expense_date?: string | null;

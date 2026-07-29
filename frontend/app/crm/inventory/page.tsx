@@ -25,19 +25,16 @@ import {
   getInventoryItems,
   type InventoryItem,
 } from "@/lib/inventory";
+import {
+  addMoney,
+  compareMoney,
+  formatMoney,
+  multiplyMoneyByInteger,
+  subtractMoney,
+} from "@/lib/money";
 
 const UNKNOWN_LOAD_ERROR =
   "Unable to load inventory metrics.";
-
-function formatAmount(
-  amount: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 function formatNumber(
   value: number,
@@ -145,24 +142,26 @@ export default function InventoryPage() {
         Number(item.reorder_level),
     );
 
-    const inventoryCostValue =
-      items.reduce(
-        (total, item) =>
-          total +
-          Number(item.quantity) *
-            Number(item.cost_price),
-        0,
-      );
+    const inventoryCostValue = addMoney(
+      items.map((item) =>
+        multiplyMoneyByInteger(
+          item.cost_price,
+          item.quantity,
+        ),
+      ),
+    );
 
-    const potentialGrossProfit =
-      items.reduce(
-        (total, item) =>
-          total +
-          Number(item.quantity) *
-            (Number(item.selling_price) -
-              Number(item.cost_price)),
-        0,
-      );
+    const potentialGrossProfit = addMoney(
+      items.map((item) =>
+        multiplyMoneyByInteger(
+          subtractMoney(
+            item.selling_price,
+            item.cost_price,
+          ),
+          item.quantity,
+        ),
+      ),
+    );
 
     return {
       totalUnits,
@@ -224,7 +223,7 @@ export default function InventoryPage() {
           : "Inventory Cost Value",
         value: loading
           ? "—"
-          : formatAmount(
+          : formatMoney(
               inventorySummary.inventoryCostValue,
               numberLocale,
             ),
@@ -240,7 +239,7 @@ export default function InventoryPage() {
           : "Potential Gross Profit",
         value: loading
           ? "—"
-          : formatAmount(
+          : formatMoney(
               inventorySummary.potentialGrossProfit,
               numberLocale,
             ),
@@ -249,8 +248,10 @@ export default function InventoryPage() {
           : "Selling value minus cost value",
         icon: TrendingUp,
         tone:
-          inventorySummary.potentialGrossProfit <
-          0
+          compareMoney(
+            inventorySummary.potentialGrossProfit,
+            "0.00",
+          ) < 0
             ? ("red" as const)
             : ("green" as const),
       },

@@ -41,6 +41,7 @@ import {
   type AuthMe,
   type CompanyMember,
 } from "@/lib/auth";
+import { formatMoney } from "@/lib/money";
 
 const statusOptions: Array<ActionStatus | "all"> = [
   "all", "new", "in_review", "waiting_for_approval", "approved",
@@ -63,9 +64,93 @@ function severityTone(severity: ActionSeverity) {
   return "bg-primary-soft text-primary";
 }
 
+function detailLabel(key: string, isArabic: boolean) {
+  const labels: Record<string, [string, string]> = {
+    table: ["Source table", "جدول المصدر"],
+    id: ["Record ID", "معرّف السجل"],
+    source: ["Source", "المصدر"],
+    sku: ["SKU", "رمز المنتج"],
+    quantity: ["Current quantity", "الكمية الحالية"],
+    product_name: ["Product", "المنتج"],
+    reorder_level: ["Reorder level", "حد إعادة الطلب"],
+    unit_cost: ["Unit cost", "تكلفة الوحدة"],
+    shortage_to_reorder_level: ["Units to reorder level", "الوحدات المطلوبة لبلوغ الحد"],
+    estimated_restock_cost: ["Estimated restock cost", "تكلفة إعادة التخزين التقديرية"],
+    cost_limitation: ["Calculation limitation", "قيد الحساب"],
+    kind: ["Draft type", "نوع المسودة"],
+    estimated_cost: ["Estimated cost", "التكلفة التقديرية"],
+    quantity_to_reorder_level: ["Suggested quantity", "الكمية المقترحة"],
+    external_execution_allowed: ["External execution", "التنفيذ الخارجي"],
+  };
+  const label = labels[key];
+  if (label) {
+    return isArabic ? label[1] : label[0];
+  }
+  return key
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function detailValue(value: unknown, isArabic: boolean): React.ReactNode {
+  if (value === null || value === undefined || value === "") {
+    return isArabic ? "غير متاح" : "Unavailable";
+  }
+  if (typeof value === "boolean") {
+    if (value) {
+      return isArabic ? "مفعّل" : "Enabled";
+    }
+    return isArabic ? "معطّل" : "Disabled";
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0
+      ? value.map((item) => String(item)).join(", ")
+      : isArabic
+        ? "لا توجد بيانات"
+        : "No data";
+  }
+  if (typeof value === "object") {
+    return (
+      <StructuredDetails
+        values={value as Record<string, unknown>}
+        isArabic={isArabic}
+      />
+    );
+  }
+  return String(value);
+}
+
+function StructuredDetails({
+  values,
+  isArabic,
+}: {
+  values: Record<string, unknown>;
+  isArabic: boolean;
+}) {
+  return (
+    <dl className="grid gap-3">
+      {Object.entries(values).map(([key, value]) => (
+        <div
+          key={key}
+          className="grid gap-1 rounded-lg border border-border bg-surface px-3 py-2 sm:grid-cols-[minmax(0,180px)_1fr] sm:gap-3"
+        >
+          <dt className="text-xs font-medium text-text-secondary">
+            {detailLabel(key, isArabic)}
+          </dt>
+          <dd className="min-w-0 break-words text-sm text-text-primary">
+            {detailValue(value, isArabic)}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export default function FinancialActionCenter() {
   const { language } = useLanguage();
   const isArabic = language === "ar";
+  const moneyLocale = isArabic
+    ? "ar-SA"
+    : "en-US";
   const [me, setMe] = useState<AuthMe | null>(null);
   const [members, setMembers] = useState<CompanyMember[]>([]);
   const [actions, setActions] = useState<FinancialAction[]>([]);
@@ -111,6 +196,10 @@ export default function FinancialActionCenter() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    setNotice(null);
+  }, [language]);
 
   const filteredActions = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase();
@@ -236,11 +325,16 @@ export default function FinancialActionCenter() {
         ? `/crm/inventory?highlight=${selected.source_id}`
         : `/crm/expenses?highlight=${selected.source_id}`
     : "#";
+  const hasEditableDraft = selected
+    ? ["recipient", "message_en", "message_ar"].some(
+        (key) => key in selected.proposed_action,
+      )
+    : false;
 
   const metricCards = [
     { label: isArabic ? "الإجراءات المفتوحة" : "Open actions", value: metrics?.open_actions ?? 0 },
     { label: isArabic ? "الإجراءات المكتملة" : "Completed", value: metrics?.completed_actions ?? 0 },
-    { label: isArabic ? "القيمة المرتبطة المفتوحة" : "Open linked value", value: `${metrics?.open_financial_value ?? "0"} ${actions.find((action) => action.currency)?.currency ?? ""}`.trim() },
+    { label: isArabic ? "القيمة المرتبطة المفتوحة" : "Open linked value", value: `${formatMoney(metrics?.open_financial_value ?? "0.00", moneyLocale)} ${actions.find((action) => action.currency)?.currency ?? ""}`.trim() },
     { label: isArabic ? "فواتير بدأت متابعتها" : "Invoices followed up", value: metrics?.followed_up_invoices ?? 0 },
     { label: isArabic ? "متوسط أيام التأخير" : "Average overdue days", value: metrics?.average_days_overdue ?? (isArabic ? "غير متاح" : "Unavailable") },
     { label: isArabic ? "الموافقات" : "Approvals", value: metrics?.approvals ?? 0 },
@@ -283,11 +377,11 @@ export default function FinancialActionCenter() {
       <Modal open={selected !== null} onClose={() => setSelected(null)} title={selected ? (isArabic ? selected.title_ar : selected.title_en) : ""} description={selected ? typeLabel(selected.action_type) : undefined}>
         {selected ? <div className="space-y-6">
           <div className="flex flex-wrap gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${severityTone(selected.severity)}`}>{severityLabel(selected.severity)}</span><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusTone(selected.status)}`}>{statusLabel(selected.status)}</span>{selected.requires_approval ? <span className="rounded-full bg-warning-soft px-2.5 py-1 text-xs text-warning">{isArabic ? "يتطلب موافقة" : "Approval required"}</span> : null}</div>
-          <div className="grid gap-4 sm:grid-cols-2"><div className="rounded-xl border border-border p-4"><p className="text-xs text-text-secondary">{isArabic ? "الأثر المالي المرتبط" : "Linked financial impact"}</p><p className="mt-1 font-semibold text-text-primary">{selected.financial_impact ?? (isArabic ? "غير متاح" : "Unavailable")} {selected.currency ?? ""}</p></div><div className="rounded-xl border border-border p-4"><p className="text-xs text-text-secondary">{isArabic ? "تاريخ الاستحقاق" : "Due date"}</p><p className="mt-1 font-semibold text-text-primary">{selected.due_date ?? (isArabic ? "غير محدد" : "Not set")}</p></div></div>
-          <section><h3 className="font-semibold text-text-primary">{isArabic ? "الأدلة والمصدر" : "Evidence and source"}</h3><pre dir="ltr" className="mt-3 max-h-64 overflow-auto rounded-xl bg-surface-soft p-4 text-xs text-text-secondary">{JSON.stringify(selected.evidence, null, 2)}</pre><Link href={sourceHref} className="mt-3 inline-flex text-sm font-medium text-primary">{isArabic ? "فتح السجل الأصلي" : "Open source record"}</Link></section>
+          <div className="grid gap-4 sm:grid-cols-2"><div className="rounded-xl border border-border p-4"><p className="text-xs text-text-secondary">{isArabic ? "الأثر المالي المرتبط" : "Linked financial impact"}</p><p className="mt-1 font-semibold text-text-primary">{selected.financial_impact === null ? (isArabic ? "غير متاح" : "Unavailable") : formatMoney(selected.financial_impact, moneyLocale)} {selected.currency ?? ""}</p></div><div className="rounded-xl border border-border p-4"><p className="text-xs text-text-secondary">{isArabic ? "تاريخ الاستحقاق" : "Due date"}</p><p className="mt-1 font-semibold text-text-primary">{selected.due_date ?? (isArabic ? "غير محدد" : "Not set")}</p></div></div>
+          <section><h3 className="font-semibold text-text-primary">{isArabic ? "الأدلة والمصدر" : "Evidence and source"}</h3><div className="mt-3 rounded-xl bg-surface-soft p-3"><StructuredDetails values={selected.evidence} isArabic={isArabic} /></div><Link href={sourceHref} className="mt-3 inline-flex text-sm font-medium text-primary">{isArabic ? "فتح السجل الأصلي" : "Open source record"}</Link></section>
           <section><h3 className="font-semibold text-text-primary">{isArabic ? "التوصية" : "Recommendation"}</h3><p className="mt-2 text-sm leading-6 text-text-secondary">{isArabic ? selected.recommendation_ar : selected.recommendation_en}</p></section>
           {hasPermission("actions.assign") ? <label className="block space-y-2"><span className="text-sm font-medium text-text-primary">{isArabic ? "المسؤول" : "Assignee"}</span><select value={selected.assigned_to ?? ""} onChange={(event) => void mutate(() => assignFinancialAction(selected.id, event.target.value || null), isArabic ? "تم تحديث المسؤول." : "Assignee updated.")} className="h-11 w-full rounded-xl border border-border px-3"><option value="">{isArabic ? "غير معيّن" : "Unassigned"}</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{member.email} — {member.role}</option>)}</select></label> : null}
-          {hasPermission("actions.write") && Object.keys(selected.proposed_action).length > 0 ? <section className="space-y-3 rounded-xl border border-blue-100 bg-primary-soft p-4"><h3 className="font-semibold text-text-primary">{isArabic ? "مسودة الإجراء" : "Action draft"}</h3>{"recipient" in selected.proposed_action ? <input dir="ltr" value={draftRecipient} onChange={(event) => setDraftRecipient(event.target.value)} placeholder={isArabic ? "بريد المستلم" : "Recipient email"} className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /> : null}{draftMessage || "message_en" in selected.proposed_action || "message_ar" in selected.proposed_action ? <textarea value={draftMessage} onChange={(event) => setDraftMessage(event.target.value)} rows={5} className="w-full rounded-xl border border-border bg-surface p-3 text-sm" /> : <pre dir="ltr" className="overflow-auto text-xs">{JSON.stringify(selected.proposed_action, null, 2)}</pre>}<p className="text-xs text-text-secondary">{isArabic ? "لا يوجد تنفيذ خارجي تلقائي. تعديل المسودة بعد الموافقة يعيدها للموافقة." : "No external execution occurs. Editing an approved draft requires fresh approval."}</p><button type="button" onClick={saveDraft} disabled={working} className="rounded-xl border border-blue-100 bg-surface px-4 py-2 text-sm font-medium text-primary">{isArabic ? "حفظ المسودة" : "Save draft"}</button></section> : null}
+          {hasPermission("actions.write") && Object.keys(selected.proposed_action).length > 0 ? <section className="space-y-3 rounded-xl border border-blue-100 bg-primary-soft p-4"><h3 className="font-semibold text-text-primary">{isArabic ? "مسودة الإجراء" : "Action draft"}</h3>{"recipient" in selected.proposed_action ? <input dir="ltr" value={draftRecipient} onChange={(event) => setDraftRecipient(event.target.value)} placeholder={isArabic ? "بريد المستلم" : "Recipient email"} className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /> : null}{draftMessage || "message_en" in selected.proposed_action || "message_ar" in selected.proposed_action ? <textarea value={draftMessage} onChange={(event) => setDraftMessage(event.target.value)} rows={5} className="w-full rounded-xl border border-border bg-surface p-3 text-sm" /> : <StructuredDetails values={selected.proposed_action} isArabic={isArabic} />}<p className="text-xs text-text-secondary">{isArabic ? "لا يوجد تنفيذ خارجي تلقائي. تعديل المسودة بعد الموافقة يعيدها للموافقة." : "No external execution occurs. Editing an approved draft requires fresh approval."}</p>{hasEditableDraft ? <button type="button" onClick={saveDraft} disabled={working} className="rounded-xl border border-blue-100 bg-surface px-4 py-2 text-sm font-medium text-primary">{isArabic ? "حفظ المسودة" : "Save draft"}</button> : null}</section> : null}
           {hasPermission("actions.write") ? <div className="flex flex-wrap gap-2 border-t border-border pt-4">
             {selected.status === "new" ? <button type="button" onClick={() => void mutate(() => transitionFinancialAction(selected.id, "in_review"), isArabic ? "بدأت المراجعة." : "Review started.")} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">{isArabic ? "بدء المراجعة" : "Start review"}</button> : null}
             {selected.status === "in_review" && selected.requires_approval ? <button type="button" onClick={() => void mutate(() => transitionFinancialAction(selected.id, "waiting_for_approval"), isArabic ? "أُرسلت للموافقة." : "Submitted for approval.")} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">{isArabic ? "طلب الموافقة" : "Request approval"}</button> : null}

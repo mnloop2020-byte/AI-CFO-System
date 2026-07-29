@@ -8,16 +8,22 @@ import {
 } from "lucide-react";
 
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import {
+  compareMoney,
+  formatMoney,
+  parseMoneyToMinorUnits,
+  type MoneyString,
+} from "@/lib/money";
 
 type CashFlowCardProps = {
-  trackedInflows: number;
-  recordedOutflows: number;
-  expectedInflows: number;
-  netCashFlow: number;
+  trackedInflows: MoneyString;
+  recordedOutflows: MoneyString;
+  expectedInflows: MoneyString;
+  netCashFlow: MoneyString;
 };
 
 function formatAmount(
-  amount: number,
+  amount: MoneyString,
   language: "en" | "ar",
 ) {
   const locale =
@@ -25,26 +31,33 @@ function formatAmount(
       ? "ar-SA-u-nu-latn"
       : "en-US";
 
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatMoney(amount, locale);
 }
 
 function calculateBarWidth(
-  value: number,
-  maximumValue: number,
+  value: MoneyString,
+  maximumMinorUnits: bigint,
 ) {
-  if (value <= 0 || maximumValue <= 0) {
+  const valueMinorUnits =
+    parseMoneyToMinorUnits(value);
+  const magnitude =
+    valueMinorUnits < 0n
+      ? -valueMinorUnits
+      : valueMinorUnits;
+  if (
+    magnitude === 0n ||
+    maximumMinorUnits <= 0n
+  ) {
     return 0;
   }
 
+  const boundedPercent = Number(
+    (magnitude * 10000n) /
+      maximumMinorUnits,
+  ) / 100;
   return Math.max(
     4,
-    Math.min(
-      100,
-      (value / maximumValue) * 100,
-    ),
+    Math.min(100, boundedPercent),
   );
 }
 
@@ -56,12 +69,23 @@ export default function CashFlowCard({
 }: CashFlowCardProps) {
   const { language } = useLanguage();
 
-  const maximumValue = Math.max(
-    Math.abs(trackedInflows),
-    Math.abs(recordedOutflows),
-    Math.abs(expectedInflows),
-    1,
-  );
+  const maximumMinorUnits = [
+    trackedInflows,
+    recordedOutflows,
+    expectedInflows,
+  ].reduce((maximum, amount) => {
+    const minorUnits =
+      parseMoneyToMinorUnits(amount);
+    const magnitude =
+      minorUnits < 0n
+        ? -minorUnits
+        : minorUnits;
+    return magnitude > maximum
+      ? magnitude
+      : maximum;
+  }, 1n);
+  const hasNegativeNetCashFlow =
+    compareMoney(netCashFlow, "0.00") < 0;
 
   const cashFlowRows = [
     {
@@ -121,14 +145,14 @@ export default function CashFlowCard({
 
         <div
           className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
-            netCashFlow < 0
+            hasNegativeNetCashFlow
               ? "bg-danger-soft"
               : "bg-success-soft"
           }`}
         >
           <span
             className={`flex size-9 items-center justify-center rounded-lg bg-surface ${
-              netCashFlow < 0
+              hasNegativeNetCashFlow
                 ? "text-danger"
                 : "text-success"
             }`}
@@ -146,7 +170,7 @@ export default function CashFlowCard({
             <p
               dir="ltr"
               className={`mt-0.5 text-sm font-semibold ${
-                netCashFlow < 0
+                hasNegativeNetCashFlow
                   ? "text-danger"
                   : "text-success"
               }`}
@@ -165,8 +189,8 @@ export default function CashFlowCard({
           const Icon = row.icon;
 
           const barWidth = calculateBarWidth(
-            Math.abs(row.value),
-            maximumValue,
+            row.value,
+            maximumMinorUnits,
           );
 
           return (

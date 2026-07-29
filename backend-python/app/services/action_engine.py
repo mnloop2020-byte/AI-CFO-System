@@ -2,8 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from typing import Any
 
+from app.money import (
+    money_to_string,
+    multiply_money,
+    parse_money,
+    serialize_decimal_values,
+)
 from app.schemas.action_schema import DetectionResult
 from app.schemas.company_schema import FinancialSettings
 from app.schemas.customer_schema import CustomerResponse
@@ -45,7 +52,7 @@ def _parse_date(value: str | None) -> date | None:
 
 def _overdue_severity(
     days_overdue: int,
-    amount: float,
+    amount: Decimal,
     settings: FinancialSettings,
 ) -> str:
     if (
@@ -153,7 +160,9 @@ def detect_action_candidates(
         if item.quantity > item.reorder_level:
             continue
         shortage = max(item.reorder_level - item.quantity, 0)
-        estimated_cost = round(shortage * item.cost_price, 2) if shortage > 0 else None
+        estimated_cost = (
+            multiply_money(item.cost_price, shortage) if shortage > 0 else None
+        )
         candidates.append(
             ActionCandidate(
                 dedup_key=f"low_inventory:{item.id}",
@@ -290,7 +299,7 @@ def detect_action_candidates(
 
 def _load_expense_policy_matches(
     expenses: list[ExpenseResponse],
-    large_expense_review_threshold: float,
+    large_expense_review_threshold: Decimal,
 ) -> dict[str, dict[str, Any]]:
     """Retrieve policy context as untrusted evidence, never executable instructions."""
 
@@ -327,8 +336,8 @@ def _source_is_resolved(action: Any, source_map: dict[str, dict[str, Any]]) -> b
     if action.source_type == "expense":
         return (
             not bool(source["is_flagged"])
-            and float(source["amount"])
-            < float(source["large_expense_review_threshold"])
+            and parse_money(source["amount"])
+            < parse_money(source["large_expense_review_threshold"])
         )
     return False
 
@@ -372,6 +381,7 @@ def run_action_detection(today: date | None = None) -> DetectionResult:
                 "recommendation_ar": candidate.payload["recommendation_ar"],
                 "due_date": candidate.payload.get("due_date"),
             }
+            refreshed_fields = serialize_decimal_values(refreshed_fields)
             current_fields = {
                 "title_en": current.title_en,
                 "title_ar": current.title_ar,
@@ -379,7 +389,7 @@ def run_action_detection(today: date | None = None) -> DetectionResult:
                 "description_ar": current.description_ar,
                 "severity": current.severity,
                 "financial_impact": (
-                    float(current.financial_impact)
+                    money_to_string(current.financial_impact)
                     if current.financial_impact is not None
                     else None
                 ),

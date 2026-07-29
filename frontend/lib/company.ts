@@ -1,12 +1,13 @@
 import { api } from "@/lib/api";
+import type { MoneyString } from "@/lib/money";
 
 export type FinancialSettings = {
   invoice_high_priority_days: number;
   invoice_critical_days: number;
-  high_amount_threshold: number;
-  critical_amount_threshold: number;
-  cash_reserve_threshold: number;
-  large_expense_review_threshold: number;
+  high_amount_threshold: MoneyString;
+  critical_amount_threshold: MoneyString;
+  cash_reserve_threshold: MoneyString;
+  large_expense_review_threshold: MoneyString;
 };
 
 export type CompanySettings = {
@@ -27,7 +28,7 @@ export type CompanySettings = {
   tax_id: string | null;
   vat_registered: boolean | null;
   bank_name: string | null;
-  opening_balance: string | number | null;
+  opening_balance: MoneyString | null;
   balance_date: string | null;
   financial_settings: FinancialSettings;
   created_at: string;

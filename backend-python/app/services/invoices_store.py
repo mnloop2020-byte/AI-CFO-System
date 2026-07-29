@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from app.money import parse_money
 from app.schemas.invoices_schema import (
     InvoiceCreate,
     InvoiceResponse,
@@ -47,8 +48,8 @@ def _invoice_response(row: dict[str, object]) -> InvoiceResponse:
         id=str(row["id"]),
         customer_id=str(row["customer_id"]) if row.get("customer_id") else None,
         invoice_number=str(row["invoice_number"]),
-        total_amount=float(row["total_amount"]),
-        vat_amount=float(row["vat_amount"]),
+        total_amount=parse_money(row["total_amount"]),
+        vat_amount=parse_money(row["vat_amount"]),
         status=_effective_status(str(row["status"]), str(row["due_date"]) if row.get("due_date") else None),
         due_date=str(row["due_date"]) if row.get("due_date") else None,
         file_url=str(row["file_url"]) if row.get("file_url") else None,
@@ -64,7 +65,7 @@ def create_invoice(invoice: InvoiceCreate) -> InvoiceResponse:
     response = (
         supabase
         .table("invoices")
-        .insert(invoice.model_dump())
+        .insert(invoice.model_dump(mode="json"))
         .execute()
     )
 
@@ -113,12 +114,14 @@ def update_invoice(
     if invoice.invoice_number is not None:
         _ensure_unique_invoice_number(invoice.invoice_number, excluding_id=invoice_id)
 
-    update_data = invoice.model_dump(exclude_none=True)
+    update_data = invoice.model_dump(mode="json", exclude_none=True)
     # Keep only the invoice fields sent by the user.
 
     current = current_response.data[0]
-    effective_total = float(update_data.get("total_amount", current["total_amount"]))
-    effective_vat = float(update_data.get("vat_amount", current["vat_amount"]))
+    effective_total = parse_money(
+        update_data.get("total_amount", current["total_amount"])
+    )
+    effective_vat = parse_money(update_data.get("vat_amount", current["vat_amount"]))
     if effective_vat > effective_total:
         raise RecordConflictError("VAT amount cannot exceed total amount.")
 

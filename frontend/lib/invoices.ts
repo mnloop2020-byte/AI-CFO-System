@@ -1,11 +1,12 @@
 import { api } from "@/lib/api";
+import type { MoneyString } from "@/lib/money";
 
 export type Invoice = {
   id: string;
   customer_id: string | null;
   invoice_number: string;
-  total_amount: number;
-  vat_amount: number;
+  total_amount: MoneyString;
+  vat_amount: MoneyString;
   status: string;
   due_date: string | null;
   file_url: string | null;
@@ -16,8 +17,8 @@ export type Invoice = {
 export type CreateInvoiceInput = {
   customer_id?: string | null;
   invoice_number: string;
-  total_amount: number;
-  vat_amount: number;
+  total_amount: MoneyString;
+  vat_amount: MoneyString;
   status: string;
   due_date?: string | null;
 };

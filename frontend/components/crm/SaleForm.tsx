@@ -16,6 +16,12 @@ import type {
   CreateSaleInput,
   Sale,
 } from "@/lib/sales";
+import {
+  formatMoney,
+  isNonNegativeMoney,
+  multiplyMoneyByInteger,
+  normalizeMoney,
+} from "@/lib/money";
 
 type SaleFormProps = {
   onCancel: () => void;
@@ -62,16 +68,6 @@ function getInitialStatus(sale: Sale | null) {
   }
 }
 
-function formatAmount(
-  value: number,
-  locale: string,
-) {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
 export default function SaleForm({
   onCancel,
   onSave,
@@ -107,7 +103,7 @@ export default function SaleForm({
   );
 
   const [unitPrice, setUnitPrice] = useState(
-    initialSale?.unit_price ?? 0,
+    initialSale?.unit_price ?? "0.00",
   );
 
   const [status, setStatus] = useState(
@@ -118,8 +114,14 @@ export default function SaleForm({
     useState<string | null>(null);
 
   const calculatedTotal =
-    Math.max(0, quantity) *
-    Math.max(0, unitPrice);
+    Number.isSafeInteger(quantity) &&
+    quantity >= 0 &&
+    isNonNegativeMoney(unitPrice)
+      ? multiplyMoneyByInteger(
+          unitPrice,
+          quantity,
+        )
+      : "0.00";
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -153,10 +155,7 @@ export default function SaleForm({
       return;
     }
 
-    if (
-      !Number.isFinite(unitPrice) ||
-      unitPrice < 0
-    ) {
+    if (!isNonNegativeMoney(unitPrice)) {
       setValidationError(
         isArabic
           ? "يجب أن يكون سعر الوحدة صفرًا أو أكبر."
@@ -170,7 +169,7 @@ export default function SaleForm({
       product_name: normalizedProductName,
       customer_id: customerId || null,
       quantity,
-      unit_price: unitPrice,
+      unit_price: normalizeMoney(unitPrice),
       status,
       sale_date: saleDate
         ? `${saleDate}T00:00:00.000Z`
@@ -301,9 +300,7 @@ export default function SaleForm({
             required
             value={unitPrice}
             onChange={(event) =>
-              setUnitPrice(
-                Number(event.target.value),
-              )
+              setUnitPrice(event.target.value)
             }
             disabled={saving}
             placeholder="0.00"
@@ -362,7 +359,7 @@ export default function SaleForm({
           </p>
 
           <p className="mt-1 text-xl font-semibold text-text-primary">
-            {formatAmount(
+            {formatMoney(
               calculatedTotal,
               numberLocale,
             )}

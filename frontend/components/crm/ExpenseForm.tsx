@@ -16,6 +16,10 @@ import type {
   CreateExpenseInput,
   Expense,
 } from "@/lib/expenses";
+import {
+  isPositiveMoney,
+  normalizeMoney,
+} from "@/lib/money";
 
 type ExpenseFormProps = {
   onCancel: () => void;
@@ -60,7 +64,7 @@ export default function ExpenseForm({
     initialExpense !== null;
 
   const [amount, setAmount] = useState(
-    initialExpense?.amount ?? 0,
+    initialExpense?.amount ?? "0.00",
   );
 
   const [expenseDate, setExpenseDate] =
@@ -109,10 +113,7 @@ export default function ExpenseForm({
     const normalizedDescription =
       description.trim();
 
-    if (
-      !Number.isFinite(amount) ||
-      amount <= 0
-    ) {
+    if (!isPositiveMoney(amount)) {
       setValidationError(
         isArabic
           ? "يجب أن يكون مبلغ المصروف أكبر من صفر."
@@ -133,7 +134,7 @@ export default function ExpenseForm({
     }
 
     await onSave({
-      amount,
+      amount: normalizeMoney(amount),
       category: normalizedCategory,
       vendor: normalizedVendor || null,
       description:
@@ -165,9 +166,7 @@ export default function ExpenseForm({
             required
             value={amount}
             onChange={(event) =>
-              setAmount(
-                Number(event.target.value),
-              )
+              setAmount(event.target.value)
             }
             disabled={saving}
             placeholder="0.00"

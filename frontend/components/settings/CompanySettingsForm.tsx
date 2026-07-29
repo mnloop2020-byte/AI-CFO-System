@@ -21,9 +21,9 @@ import {
   type CompanySettings,
   type CompanySettingsEditable,
   type CompanySettingsUpdate,
-  type FinancialSettings,
 } from "@/lib/company";
 import { validateFinancialSettings } from "@/lib/company-settings-validation";
+import { normalizeMoney } from "@/lib/money";
 
 const inputClasses =
   "h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm text-text-primary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary-soft disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-text-secondary";
@@ -50,10 +50,10 @@ const emptySettings: CompanySettingsEditable = {
   financial_settings: {
     invoice_high_priority_days: 30,
     invoice_critical_days: 60,
-    high_amount_threshold: 10_000,
-    critical_amount_threshold: 50_000,
-    cash_reserve_threshold: 75_000,
-    large_expense_review_threshold: 15_000,
+    high_amount_threshold: "10000.00",
+    critical_amount_threshold: "50000.00",
+    cash_reserve_threshold: "75000.00",
+    large_expense_review_threshold: "15000.00",
   },
 };
 
@@ -110,9 +110,28 @@ export default function CompanySettingsForm() {
     setSettings((current) => ({ ...current, [field]: nullable(value) }));
   };
 
-  const setFinancialSetting = (
-    field: keyof FinancialSettings,
+  const setFinancialDaySetting = (
+    field:
+      | "invoice_high_priority_days"
+      | "invoice_critical_days",
     value: number,
+  ) => {
+    setSettings((current) => ({
+      ...current,
+      financial_settings: {
+        ...current.financial_settings,
+        [field]: value,
+      },
+    }));
+  };
+
+  const setFinancialMoneySetting = (
+    field:
+      | "high_amount_threshold"
+      | "critical_amount_threshold"
+      | "cash_reserve_threshold"
+      | "large_expense_review_threshold",
+    value: string,
   ) => {
     setSettings((current) => ({
       ...current,
@@ -151,9 +170,42 @@ export default function CompanySettingsForm() {
     setSaveError(null);
     setSuccessMessage(null);
     try {
-      const updated = await updateCompanySettings(
-        settings satisfies CompanySettingsUpdate,
-      );
+      const normalizedSettings = {
+        ...settings,
+        opening_balance:
+          settings.opening_balance === null
+            ? null
+            : normalizeMoney(
+                settings.opening_balance,
+              ),
+        financial_settings: {
+          ...settings.financial_settings,
+          high_amount_threshold:
+            normalizeMoney(
+              settings.financial_settings
+                .high_amount_threshold,
+            ),
+          critical_amount_threshold:
+            normalizeMoney(
+              settings.financial_settings
+                .critical_amount_threshold,
+            ),
+          cash_reserve_threshold:
+            normalizeMoney(
+              settings.financial_settings
+                .cash_reserve_threshold,
+            ),
+          large_expense_review_threshold:
+            normalizeMoney(
+              settings.financial_settings
+                .large_expense_review_threshold,
+            ),
+        },
+      } satisfies CompanySettingsUpdate;
+      const updated =
+        await updateCompanySettings(
+          normalizedSettings,
+        );
       setSettings(editableSettings(updated));
       setSuccessMessage(
         isArabic
@@ -347,7 +399,7 @@ export default function CompanySettingsForm() {
             disabled={!canEdit || saving}
             min={1}
             step={1}
-            onChange={(value) => setFinancialSetting("invoice_high_priority_days", value)}
+            onChange={(value) => setFinancialDaySetting("invoice_high_priority_days", value)}
           />
           <NumberField
             label={isArabic ? "أيام الحالة الحرجة للفواتير" : "Critical invoice days"}
@@ -355,39 +407,31 @@ export default function CompanySettingsForm() {
             disabled={!canEdit || saving}
             min={1}
             step={1}
-            onChange={(value) => setFinancialSetting("invoice_critical_days", value)}
+            onChange={(value) => setFinancialDaySetting("invoice_critical_days", value)}
           />
-          <NumberField
+          <MoneyField
             label={isArabic ? "حد المبلغ عالي الأولوية" : "High amount threshold"}
             value={settings.financial_settings.high_amount_threshold}
             disabled={!canEdit || saving}
-            min={0}
-            step={0.01}
-            onChange={(value) => setFinancialSetting("high_amount_threshold", value)}
+            onChange={(value) => setFinancialMoneySetting("high_amount_threshold", value)}
           />
-          <NumberField
+          <MoneyField
             label={isArabic ? "حد المبلغ الحرج" : "Critical amount threshold"}
             value={settings.financial_settings.critical_amount_threshold}
             disabled={!canEdit || saving}
-            min={0}
-            step={0.01}
-            onChange={(value) => setFinancialSetting("critical_amount_threshold", value)}
+            onChange={(value) => setFinancialMoneySetting("critical_amount_threshold", value)}
           />
-          <NumberField
+          <MoneyField
             label={isArabic ? "حد الاحتياطي النقدي" : "Cash reserve threshold"}
             value={settings.financial_settings.cash_reserve_threshold}
             disabled={!canEdit || saving}
-            min={0}
-            step={0.01}
-            onChange={(value) => setFinancialSetting("cash_reserve_threshold", value)}
+            onChange={(value) => setFinancialMoneySetting("cash_reserve_threshold", value)}
           />
-          <NumberField
+          <MoneyField
             label={isArabic ? "حد مراجعة المصروف الكبير" : "Large-expense review threshold"}
             value={settings.financial_settings.large_expense_review_threshold}
             disabled={!canEdit || saving}
-            min={0}
-            step={0.01}
-            onChange={(value) => setFinancialSetting("large_expense_review_threshold", value)}
+            onChange={(value) => setFinancialMoneySetting("large_expense_review_threshold", value)}
           />
           <p className="rounded-xl border border-amber-100 bg-warning-soft px-4 py-3 text-sm leading-6 text-text-secondary sm:col-span-2">
             {isArabic
@@ -465,6 +509,36 @@ function NumberField({
         min={min}
         step={step}
         onChange={(event) => onChange(event.currentTarget.valueAsNumber)}
+        className={inputClasses}
+      />
+    </Field>
+  );
+}
+
+function MoneyField({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Field label={label}>
+      <input
+        type="number"
+        inputMode="decimal"
+        dir="ltr"
+        value={value}
+        disabled={disabled}
+        min={0}
+        step="0.01"
+        onChange={(event) =>
+          onChange(event.currentTarget.value)
+        }
         className={inputClasses}
       />
     </Field>

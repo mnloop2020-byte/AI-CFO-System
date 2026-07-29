@@ -7,10 +7,10 @@ import { validateFinancialSettings } from "../lib/company-settings-validation.ts
 const validSettings = {
   invoice_high_priority_days: 30,
   invoice_critical_days: 60,
-  high_amount_threshold: 10_000,
-  critical_amount_threshold: 50_000,
-  cash_reserve_threshold: 75_000,
-  large_expense_review_threshold: 15_000,
+  high_amount_threshold: "10000.00",
+  critical_amount_threshold: "50000.00",
+  cash_reserve_threshold: "75000.00",
+  large_expense_review_threshold: "15000.00",
 };
 
 test("accepts the documented financial alert defaults", () => {
@@ -34,18 +34,18 @@ test("rejects non-positive or fractional invoice days", () => {
   );
 });
 
-test("rejects non-finite and negative monetary thresholds", () => {
+test("rejects invalid and negative monetary thresholds", () => {
   assert.equal(
     validateFinancialSettings({
       ...validSettings,
-      cash_reserve_threshold: Number.NaN,
+      cash_reserve_threshold: "NaN",
     }),
     "invalid_amount",
   );
   assert.equal(
     validateFinancialSettings({
       ...validSettings,
-      large_expense_review_threshold: -1,
+      large_expense_review_threshold: "-1.00",
     }),
     "invalid_amount",
   );
@@ -62,7 +62,8 @@ test("enforces critical thresholds above high thresholds", () => {
   assert.equal(
     validateFinancialSettings({
       ...validSettings,
-      critical_amount_threshold: 10_000,
+      critical_amount_threshold:
+        "10000.004",
     }),
     "invalid_amount_order",
   );

@@ -88,6 +88,39 @@ test("viewer has no member management controls", () => {
   assert.equal(canRemoveMember(viewerIdentity, target), false);
 });
 
+test("restricted navigation and report actions are permission-driven", () => {
+  const sidebar = readFileSync(
+    new URL("../components/layout/Sidebar.tsx", import.meta.url),
+    "utf8",
+  );
+  const reportTemplates = readFileSync(
+    new URL("../components/reports/ReportTemplates.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(sidebar, /usePermission\("members\.read"\)/);
+  assert.match(sidebar, /canViewMembers\s*\?/);
+  assert.match(reportTemplates, /usePermission\("reports\.write"\)/);
+  assert.match(reportTemplates, /\{canWriteReports \? \(/);
+});
+
+test("Action Center renders structured evidence without raw JSON", () => {
+  const actionCenter = readFileSync(
+    new URL(
+      "../components/actions/FinancialActionCenter.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(actionCenter, /function StructuredDetails/);
+  assert.match(actionCenter, /hasEditableDraft/);
+  assert.doesNotMatch(
+    actionCenter,
+    /JSON\.stringify\(selected\.(evidence|proposed_action)/,
+  );
+});
+
 test("auth routes and bearer-token integration remain wired", () => {
   const middleware = readFileSync(
     new URL("../middleware.ts", import.meta.url),
@@ -109,6 +142,10 @@ test("auth routes and bearer-token integration remain wired", () => {
     new URL("../lib/api.ts", import.meta.url),
     "utf8",
   );
+  const authClient = readFileSync(
+    new URL("../lib/auth.ts", import.meta.url),
+    "utf8",
+  );
 
   for (const route of ["/dashboard/:path*", "/members/:path*", "/profile/:path*"]) {
     assert.match(middleware, new RegExp(route.replaceAll("*", "\\*")));
@@ -117,6 +154,8 @@ test("auth routes and bearer-token integration remain wired", () => {
   assert.match(forgotPassword, /resetPasswordForEmail/);
   assert.match(resetPassword, /auth\.updateUser/);
   assert.match(apiClient, /Authorization.*Bearer/);
+  assert.match(authClient, /authMeRequest/);
+  assert.match(authClient, /AUTH_ME_CACHE_MS/);
 });
 
 test("frontend source never references the service-role secret", () => {
