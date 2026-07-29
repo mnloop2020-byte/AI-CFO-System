@@ -1,0 +1,84 @@
+name: Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - checkpoint/pre-single-company-auth-20260720
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: backend-python
+    env:
+      APP_ENV: test
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      RATE_LIMIT_BACKEND: memory
+      FORWARDED_ALLOW_IPS: 127.0.0.1
+      OPENROUTER_API_KEY: ci-placeholder
+      OPENROUTER_BASE_URL: http://127.0.0.1:9/v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            backend-python/requirements.txt
+            backend-python/requirements-dev.txt
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            "torch==2.13.0+cpu"
+          python -m pip install -r requirements-dev.txt
+      - name: Test and compile
+        run: |
+          python -m pytest -q
+          python -m compileall -q app tests scripts
+          python -m pip check
+      - name: Dependency audit
+        run: python -m pip_audit
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      DEPLOYMENT_ENV: development
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-public-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  container-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --check -f backend-python/Dockerfile backend-python
+      - run: docker build --check -f frontend/Dockerfile frontend

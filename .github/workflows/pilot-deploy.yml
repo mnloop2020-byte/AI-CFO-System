@@ -1,0 +1,101 @@
+name: Pilot Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: Deploy the reviewed commit to the protected Pilot environment
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-deploy
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    if: ${{ inputs.confirm_deploy }}
+    environment: pilot
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure Artifact Registry
+        run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build and push Backend image
+        env:
+          IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_ARTIFACT_REPOSITORY }}/ai-cfo-backend:${{ github.sha }}
+        run: |
+          docker build --pull --platform linux/amd64 --tag "$IMAGE" backend-python
+          docker push "$IMAGE"
+
+      - id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: ${{ vars.CLOUD_RUN_SERVICE }}
+          region: ${{ vars.GCP_REGION }}
+          image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_ARTIFACT_REPOSITORY }}/ai-cfo-backend:${{ github.sha }}
+          flags: >-
+            --cpu=1
+            --memory=2Gi
+            --min=0
+            --max=1
+            --concurrency=8
+            --port=8080
+            --timeout=120s
+            --cpu-throttling
+            --deploy-health-check
+            --startup-probe=httpGet.path=/health/ready,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=5,periodSeconds=10,failureThreshold=12
+            --liveness-probe=httpGet.path=/health/live,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=5,periodSeconds=30,failureThreshold=3
+
+      - name: Verify deployed origin
+        env:
+          DEPLOYED_URL: ${{ steps.deploy.outputs.url }}
+          EXPECTED_URL: ${{ vars.PILOT_API_ORIGIN }}
+        run: test "$DEPLOYED_URL" = "$EXPECTED_URL"
+
+  frontend:
+    if: ${{ inputs.confirm_deploy }}
+    needs: backend
+    environment: pilot
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Pull reviewed Vercel environment
+        run: npx --yes vercel@58.4.0 pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build Frontend
+        run: npx --yes vercel@58.4.0 build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy prebuilt Frontend
+        run: npx --yes vercel@58.4.0 deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"

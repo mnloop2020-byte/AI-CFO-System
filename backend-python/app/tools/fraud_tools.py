@@ -30,7 +30,7 @@ def get_fraud_risk_summary(
     for expense in expenses:
         key = (
             expense.category.lower(),
-            round(float(expense.amount), 2),
+            expense.amount,
             (expense.vendor or "").lower(),
             expense.expense_date or "",
             (expense.description or "").lower(),
@@ -88,6 +88,17 @@ def get_fraud_risk_summary(
             + len(duplicate_invoice_numbers)
         ),
         "fraud_confirmed": False,
+        "data_sources": [
+            {
+                "table": "expenses",
+                "record_ids": [expense.id for expense in expenses],
+                "calculation": "flagged records and exact duplicate-field candidates",
+            },
+            {
+                "table": "invoices",
+                "record_ids": [invoice.id for invoice in invoices],
+                "calculation": "duplicate invoice-number candidates",
+            },
+        ],
     }
 
-    

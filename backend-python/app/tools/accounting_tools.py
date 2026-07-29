@@ -1,8 +1,11 @@
+from decimal import Decimal
+
+from app.money import parse_money, subtract_money, sum_money
+from app.schemas.expenses_schema import ExpenseResponse
+from app.schemas.invoices_schema import InvoiceResponse
 from app.services.expenses_store import get_expenses
 from app.services.invoices_store import get_invoices
 from app.tools.sales_tools import get_sales_summary
-from app.schemas.expenses_schema import ExpenseResponse
-from app.schemas.invoices_schema import InvoiceResponse
 
 def get_accounting_summary(
     sales_summary: dict | None = None,
@@ -18,25 +21,19 @@ def get_accounting_summary(
     if invoices is None:
         invoices = get_invoices()
 
-    total_expenses = sum(
-        float(expense.amount)
-        for expense in expenses
+    total_expenses = sum_money(
+        expense.amount for expense in expenses
     )
 
-    expense_categories: dict[str, float] = {}
+    expense_categories: dict[str, Decimal] = {}
 
     for expense in expenses:
         category = expense.category
 
         if category not in expense_categories:
-            expense_categories[category] = 0.0
+            expense_categories[category] = Decimal("0.00")
 
-        expense_categories[category] += float(expense.amount)
-
-    expense_categories = {
-        category: round(amount, 2)
-        for category, amount in expense_categories.items()
-    }
+        expense_categories[category] += expense.amount
 
     invoice_statuses: dict[str, dict] = {}
 
@@ -46,38 +43,43 @@ def get_accounting_summary(
         if status not in invoice_statuses:
             invoice_statuses[status] = {
                 "count": 0,
-                "amount": 0.0,
+                "amount": Decimal("0.00"),
             }
 
         invoice_statuses[status]["count"] += 1
-        invoice_statuses[status]["amount"] += float(
-            invoice.total_amount
-        )
+        invoice_statuses[status]["amount"] += invoice.total_amount
 
-    for status_data in invoice_statuses.values():
-        status_data["amount"] = round(status_data["amount"], 2)
-
-    completed_revenue = float(
-        sales_summary["completed_revenue"]
-    )
+    completed_revenue = parse_money(sales_summary["completed_revenue"])
 
     return {
         "completed_revenue": completed_revenue,
-        "total_expenses": round(total_expenses, 2),
-        "preliminary_operating_result": round(
-            completed_revenue - total_expenses,
-            2,
+        "total_expenses": total_expenses,
+        "preliminary_operating_result": subtract_money(
+            completed_revenue,
+            total_expenses,
         ),
         "expense_categories": expense_categories,
         "flagged_expenses_count": sum(
             1 for expense in expenses if expense.is_flagged
         ),
         "invoice_statuses": invoice_statuses,
-        "total_invoiced_vat": round(
-            sum(float(invoice.vat_amount) for invoice in invoices),
-            2,
+        "total_invoiced_vat": sum_money(
+            invoice.vat_amount for invoice in invoices
         ),
+        "data_sources": [
+            *sales_summary.get("data_sources", []),
+            {
+                "table": "expenses",
+                "record_ids": [expense.id for expense in expenses],
+                "calculation": "total_expenses = sum(amount)",
+            },
+            {
+                "table": "invoices",
+                "record_ids": [invoice.id for invoice in invoices],
+                "calculation": "total_invoiced_vat = sum(vat_amount)",
+            },
+        ],
     }
 
 
-# Note: This tool combines sales, expenses, and invoice data into one accounting summary without double-counting invoice revenue. 
+# Note: This tool combines sales, expenses, and invoice data without double-counting invoice revenue.

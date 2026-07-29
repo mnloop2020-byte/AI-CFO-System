@@ -1,5 +1,8 @@
-from fastapi import APIRouter,Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
+from app.security.authentication import require_permission
+from app.security.request_context import RequestContext
 from app.schemas.expenses_schema import ExpenseCreate, ExpenseResponse, ExpenseUpdate
+from app.services.store_errors import RecordNotFoundError
 from app.services.expenses_store import (
     create_expense,
     delete_expense,
@@ -11,7 +14,10 @@ router = APIRouter(prefix="/expenses", tags=["Expenses"])
 
 
 @router.post("", response_model=ExpenseResponse)
-def add_expense(expense: ExpenseCreate):
+def add_expense(
+    expense: ExpenseCreate,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     new_expense = create_expense(expense)
 
     return new_expense
@@ -19,13 +25,19 @@ def add_expense(expense: ExpenseCreate):
 
 
 @router.get("", response_model=list[ExpenseResponse])
-def list_expenses():
+def list_expenses(
+    _: RequestContext = Depends(require_permission("financial.read")),
+):
     expenses = get_expenses()
 
     return expenses
     # Get all expenses from Supabase.
 @router.patch("/{expense_id}", response_model=ExpenseResponse)
-def edit_expense(expense_id: str, expense: ExpenseUpdate = Body(...)):
+def edit_expense(
+    expense_id: str,
+    expense: ExpenseUpdate = Body(...),
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     try:
         updated_expense = update_expense(
             expense_id=expense_id,
@@ -35,7 +47,7 @@ def edit_expense(expense_id: str, expense: ExpenseUpdate = Body(...)):
         return updated_expense
         # Update one expense and return it.
 
-    except ValueError:
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Expense not found",
@@ -43,7 +55,10 @@ def edit_expense(expense_id: str, expense: ExpenseUpdate = Body(...)):
         # Return 404 if the expense ID does not exist.
 
 @router.delete("/{expense_id}")
-def remove_expense(expense_id: str):
+def remove_expense(
+    expense_id: str,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     try:
         delete_expense(expense_id)
 
@@ -53,7 +68,7 @@ def remove_expense(expense_id: str):
         }
         # Delete one expense and return a success message.
 
-    except ValueError:
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Expense not found",

@@ -1,35 +1,42 @@
 from datetime import datetime, timezone
 
-from supabase import Client, create_client
-
-from app.config.settings import SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
+from app.money import parse_money
 from app.schemas.inventory_schema import (
     InventoryCreate,
     InventoryResponse,
     InventoryUpdate,
 )
+from app.services.supabase_client import get_supabase_client
+from app.services.store_errors import (
+    RecordConflictError,
+    RecordNotFoundError,
+    is_constraint_error,
+)
 
 
-def get_supabase_client() -> Client:
-    if not SUPABASE_URL:
-        raise ValueError("SUPABASE_URL is missing. Add it to backend-python/.env")
-
-    if not SUPABASE_SERVICE_ROLE_KEY:
-        raise ValueError(
-            "SUPABASE_SERVICE_ROLE_KEY is missing. Add it to backend-python/.env"
-        )
-
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    # Creates and returns the Supabase client.
+def _ensure_unique_sku(sku: str | None, *, excluding_id: str | None = None) -> None:
+    if not sku:
+        return
+    query = (
+        get_supabase_client()
+        .table("inventory")
+        .select("id")
+        .eq("sku", sku)
+    )
+    if excluding_id:
+        query = query.neq("id", excluding_id)
+    if query.limit(1).execute().data:
+        raise RecordConflictError("An inventory product with this SKU already exists.")
 
 
 def create_inventory_item(item: InventoryCreate) -> InventoryResponse:
     supabase = get_supabase_client()
+    _ensure_unique_sku(item.sku)
 
     response = (
         supabase
         .table("inventory")
-        .insert(item.model_dump())
+        .insert(item.model_dump(mode="json"))
         .execute()
     )
 
@@ -41,8 +48,8 @@ def create_inventory_item(item: InventoryCreate) -> InventoryResponse:
         sku=row.get("sku"),
         quantity=row["quantity"],
         reorder_level=row["reorder_level"],
-        cost_price=float(row["cost_price"]),
-        selling_price=float(row["selling_price"]),
+        cost_price=parse_money(row["cost_price"]),
+        selling_price=parse_money(row["selling_price"]),
         last_sold=row.get("last_sold"),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
@@ -70,8 +77,8 @@ def get_inventory_items() -> list[InventoryResponse]:
             sku=row.get("sku"),
             quantity=row["quantity"],
             reorder_level=row["reorder_level"],
-            cost_price=float(row["cost_price"]),
-            selling_price=float(row["selling_price"]),
+            cost_price=parse_money(row["cost_price"]),
+            selling_price=parse_money(row["selling_price"]),
             last_sold=row.get("last_sold"),
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),
@@ -86,8 +93,10 @@ def update_inventory_item(
     item: InventoryUpdate,
 ) -> InventoryResponse:
     supabase = get_supabase_client()
+    if item.sku is not None:
+        _ensure_unique_sku(item.sku, excluding_id=item_id)
 
-    update_data = item.model_dump(exclude_none=True)
+    update_data = item.model_dump(mode="json", exclude_none=True)
     # Keep only the fields the user wants to update.
 
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -102,7 +111,7 @@ def update_inventory_item(
     )
 
     if not response.data:
-        raise ValueError("Inventory item not found")
+        raise RecordNotFoundError("Inventory item not found")
     # Stop if no item was found with this ID.
 
     row = response.data[0]
@@ -113,8 +122,8 @@ def update_inventory_item(
         sku=row.get("sku"),
         quantity=row["quantity"],
         reorder_level=row["reorder_level"],
-        cost_price=float(row["cost_price"]),
-        selling_price=float(row["selling_price"]),
+        cost_price=parse_money(row["cost_price"]),
+        selling_price=parse_money(row["selling_price"]),
         last_sold=row.get("last_sold"),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
@@ -126,16 +135,23 @@ def update_inventory_item(
 def delete_inventory_item(item_id: str) -> None:
     supabase = get_supabase_client()
 
-    response = (
-        supabase
-        .table("inventory")
-        .delete()
-        .eq("id", item_id)
-        .execute()
-    )
+    try:
+        response = (
+            supabase
+            .table("inventory")
+            .delete()
+            .eq("id", item_id)
+            .execute()
+        )
+    except Exception as error:
+        if is_constraint_error(error, "23503"):
+            raise RecordConflictError(
+                "Inventory product is linked to another record and cannot be deleted."
+            ) from error
+        raise
 
     if not response.data:
-        raise ValueError("Inventory item not found")
+        raise RecordNotFoundError("Inventory item not found")
     # Stop if no inventory item was found with this ID.
 
 
@@ -169,8 +185,8 @@ def get_low_inventory_items() -> list[InventoryResponse]:
             sku=row.get("sku"),
             quantity=row["quantity"],
             reorder_level=row["reorder_level"],
-            cost_price=float(row["cost_price"]),
-            selling_price=float(row["selling_price"]),
+            cost_price=parse_money(row["cost_price"]),
+            selling_price=parse_money(row["selling_price"]),
             last_sold=row.get("last_sold"),
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),

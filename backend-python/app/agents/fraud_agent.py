@@ -1,6 +1,7 @@
 import json
 
 from app.ai.llm import get_llm_client
+from app.ai.financial_grounding import enrich_financial_data, ground_financial_reply
 from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.schemas.chat_schema import ChatMessage
@@ -11,7 +12,7 @@ def run_fraud_agent(
     user_message: str,
     old_messages: list[ChatMessage] | None = None,
 ) -> str:
-    fraud_summary = get_fraud_risk_summary()
+    fraud_summary = enrich_financial_data(get_fraud_risk_summary())
     recent_user_messages = [
     {
         "role": "user",
@@ -78,7 +79,11 @@ Strict data rules:
 
     reply = response.choices[0].message.content
 
-    return reply or "No response generated."
+    return ground_financial_reply(
+        reply or "",
+        fraud_summary,
+        user_message,
+    )
 
 
 # Note: This agent uses only the current verified fraud data and does not

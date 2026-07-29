@@ -1,4 +1,9 @@
+import re
+
 from app.agents.orchestrator import run_orchestrator
+from app.config.settings import CHAT_MAX_HISTORY_CHARS, CHAT_MAX_HISTORY_MESSAGES
+from app.schemas.chat_schema import ChatMessage, ChatSourceMode
+from app.schemas.rag_schema import DocumentSource
 from app.services.conversation_store import (
     create_conversation,
     get_conversation_messages,
@@ -6,7 +11,67 @@ from app.services.conversation_store import (
 )
 
 
-def handle_chat(message: str, conversation_id: str | None = None) -> tuple[str, str]:
+_INLINE_SOURCE_MARKER = re.compile(
+    r"[ \t]*\[(?:Source|Document source|المصدر)\s+\d+\s*:[^\]\r\n]+\]",
+    flags=re.IGNORECASE,
+)
+
+
+def _append_source_list(
+    reply: str,
+    sources: list[DocumentSource],
+    user_message: str,
+) -> str:
+    if not sources:
+        return reply
+
+    is_arabic = any("\u0600" <= character <= "\u06ff" for character in user_message)
+    heading = "### المصادر" if is_arabic else "### Sources"
+    unique_sources: list[DocumentSource] = []
+    seen: set[tuple[str, int]] = set()
+    for source in sources:
+        signature = (source.document_id, source.chunk_index)
+        if signature in seen:
+            continue
+        seen.add(signature)
+        unique_sources.append(source)
+
+    cleaned_reply = _INLINE_SOURCE_MARKER.sub("", reply).rstrip()
+    source_lines = []
+    for index, source in enumerate(unique_sources, start=1):
+        location = (
+            f"المقطع {source.chunk_index + 1}"
+            if is_arabic
+            else f"chunk {source.chunk_index + 1}"
+        )
+        qualifier = (
+            "مستند مرفوع، وليس سجلًا ماليًا مباشرًا"
+            if is_arabic
+            else "uploaded document, not a live financial record"
+        )
+        source_lines.append(
+            f"{index}. `{source.file_name}` — {location} — {qualifier}"
+        )
+    return f"{cleaned_reply}\n\n{heading}\n" + "\n".join(source_lines)
+
+
+def _bounded_llm_history(messages: list[ChatMessage]) -> list[ChatMessage]:
+    selected: list[ChatMessage] = []
+    used_chars = 0
+    for message in reversed(messages[-CHAT_MAX_HISTORY_MESSAGES:]):
+        remaining = CHAT_MAX_HISTORY_CHARS - used_chars
+        if remaining <= 0:
+            break
+        content = message.content[-remaining:]
+        selected.append(message.model_copy(update={"content": content}))
+        used_chars += len(content)
+    return list(reversed(selected))
+
+
+def handle_chat(
+    message: str,
+    conversation_id: str | None = None,
+) -> tuple[str, str, list[DocumentSource], ChatSourceMode]:
     # message: the current question/message from the user.
     # conversation_id: can be a string or None.
     # tuple[str, str]: this function returns reply and conversation_id.
@@ -18,7 +83,11 @@ def handle_chat(message: str, conversation_id: str | None = None) -> tuple[str, 
     old_messages = get_conversation_messages(conversation_id)
     # Get previous messages from Supabase for this conversation.
 
-    reply = run_orchestrator(message, old_messages)
+    reply, sources, source_mode = run_orchestrator(
+        message,
+        _bounded_llm_history(old_messages),
+    )
+    reply = _append_source_list(reply, sources, message)
     # Send the current user message and old messages to the Orchestrator.
 
     save_message(
@@ -35,7 +104,7 @@ def handle_chat(message: str, conversation_id: str | None = None) -> tuple[str, 
     )
     # Save the assistant's reply in Supabase.
 
-    return reply, conversation_id
+    return reply, conversation_id, sources, source_mode
     # Return the AI reply and the conversation ID.
 
 

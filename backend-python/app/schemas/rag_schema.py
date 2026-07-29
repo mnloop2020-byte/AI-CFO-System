@@ -1,14 +1,37 @@
+from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel
 
 
-class AddDocumentRequest(BaseModel):
-    content: str
-    source: str | None = None
+DocumentStatus = Literal["uploaded", "processing", "ready", "failed"]
 
 
-class AddDocumentResponse(BaseModel):
+class DocumentResponse(BaseModel):
+    id: str
+    file_name: str
+    mime_type: str
+    size_bytes: int
+    status: DocumentStatus
+    chunk_count: int = 0
+    error_message: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class UploadDocumentResponse(BaseModel):
     message: str
-    chunks_count: int
+    document: DocumentResponse
 
 
-# Note: This file defines request and response shapes for adding RAG documents.
+class DeleteDocumentResponse(BaseModel):
+    deleted: bool
+    document_id: str
+
+
+class DocumentSource(BaseModel):
+    document_id: str
+    file_name: str
+    chunk_index: int
+    excerpt: str
+    similarity: float | None = None

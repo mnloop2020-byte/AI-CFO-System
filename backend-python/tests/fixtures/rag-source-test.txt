@@ -1,0 +1,7 @@
+ZEMAM-RAG-TEST-2026
+
+This is fictional development-only test content.
+The internal approval threshold is 27,450 units.
+The policy review cycle is every 45 days.
+
+Do not treat this fixture as real company data.

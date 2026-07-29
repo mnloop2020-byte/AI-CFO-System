@@ -1,6 +1,6 @@
 # AI CFO Python Backend
 
-This folder contains a starter FastAPI backend for the AI CFO system.
+This folder contains the FastAPI backend for the AI CFO system.
 
 ## Setup
 
@@ -13,5 +13,8 @@ python -m uvicorn app.main:app --reload --port 8000
 
 ## Notes
 
-- The structure is intentionally minimal.
-- Routes, agents, services, and schemas are placeholders for future development.
+- Supabase database migrations are stored in `../supabase/migrations`.
+- RAG document upload requires
+  `20260719193000_create_rag_documents.sql` before `/rag/documents` can be used.
+- RAG uploads are development-only until Supabase Auth, tenant membership,
+  and RLS policies are implemented. The Storage bucket must remain private.

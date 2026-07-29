@@ -1,7 +1,7 @@
 # this function of this file is used to check the low inventory items
 #  in the inventory store and return the count and the list of low inventory items in json format.
 
- 
+from app.money import multiply_money, subtract_money, sum_money
 from app.services.inventory_store import (
     get_inventory_items,
     get_low_inventory_items,
@@ -35,24 +35,24 @@ def get_inventory_valuation() -> dict:
 
     total_units = sum(item.quantity for item in items)
 
-    total_cost_value = sum(
-        item.quantity * float(item.cost_price)
+    total_cost_value = sum_money(
+        multiply_money(item.cost_price, item.quantity)
         for item in items
     )
 
-    total_selling_value = sum(
-        item.quantity * float(item.selling_price)
+    total_selling_value = sum_money(
+        multiply_money(item.selling_price, item.quantity)
         for item in items
     )
 
-    potential_gross_profit = total_selling_value - total_cost_value
+    potential_gross_profit = subtract_money(total_selling_value, total_cost_value)
 
     return {
         "product_count": len(items),
         "total_units": total_units,
-        "total_cost_value": round(total_cost_value, 2),
-        "total_selling_value": round(total_selling_value, 2),
-        "potential_gross_profit": round(potential_gross_profit, 2),
+        "total_cost_value": total_cost_value,
+        "total_selling_value": total_selling_value,
+        "potential_gross_profit": potential_gross_profit,
     }
 #Note: This tool calculates the total financial value and potential gross profit of the current inventory.
 
@@ -73,13 +73,13 @@ def get_inventory_analysis() -> dict:
 
     total_units = sum(item.quantity for item in items)
 
-    total_cost_value = sum(
-        item.quantity * float(item.cost_price)
+    total_cost_value = sum_money(
+        multiply_money(item.cost_price, item.quantity)
         for item in items
     )
 
-    total_selling_value = sum(
-        item.quantity * float(item.selling_price)
+    total_selling_value = sum_money(
+        multiply_money(item.selling_price, item.quantity)
         for item in items
     )
 
@@ -94,13 +94,22 @@ def get_inventory_analysis() -> dict:
         },
         "valuation": {
             "total_units": total_units,
-            "total_cost_value": round(total_cost_value, 2),
-            "total_selling_value": round(total_selling_value, 2),
-            "potential_gross_profit": round(
-                total_selling_value - total_cost_value,
-                2,
+            "total_cost_value": total_cost_value,
+            "total_selling_value": total_selling_value,
+            "potential_gross_profit": subtract_money(
+                total_selling_value,
+                total_cost_value,
             ),
         },
+        "data_sources": [
+            {
+                "table": "inventory",
+                "record_ids": [item.id for item in items],
+                "calculation": (
+                    "low stock when quantity <= reorder_level; valuations use quantity and configured prices"
+                ),
+            }
+        ],
     }
 # Note: This tool reads inventory once and returns the overview, low-stock products, and financial valuation together.
 

@@ -11,10 +11,11 @@ def get_cfo_report_data() -> dict:
     sales_summary = get_sales_summary()
     expenses = get_expenses()
     invoices = get_invoices()
+    inventory_analysis = get_inventory_analysis()
 
     return {
         "sales": sales_summary,
-        "inventory": get_inventory_analysis(),
+        "inventory": inventory_analysis,
         "accounting": get_accounting_summary(
             sales_summary=sales_summary,
             expenses=expenses,
@@ -24,9 +25,23 @@ def get_cfo_report_data() -> dict:
             expenses=expenses,
             invoices=invoices,
         ),
-        "tax": get_tax_summary(),
-      "fraud_risk": get_fraud_risk_summary(
-    expenses=expenses,
-    invoices=invoices,
-),
+        "tax": get_tax_summary(invoices=invoices),
+        "fraud_risk": get_fraud_risk_summary(
+            expenses=expenses,
+            invoices=invoices,
+        ),
+        "data_sources": [
+            *sales_summary.get("data_sources", []),
+            {
+                "table": "expenses",
+                "record_ids": [expense.id for expense in expenses],
+                "calculation": "expense totals and review flags",
+            },
+            {
+                "table": "invoices",
+                "record_ids": [invoice.id for invoice in invoices],
+                "calculation": "invoice statuses, receivables, cash inflows, and invoiced VAT",
+            },
+            *inventory_analysis.get("data_sources", []),
+        ],
     }

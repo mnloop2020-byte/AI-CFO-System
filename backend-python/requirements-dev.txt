@@ -1,0 +1,5 @@
+-r requirements.txt
+
+pytest
+pip-audit==2.10.0
+setuptools>=83.0.0

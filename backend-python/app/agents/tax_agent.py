@@ -1,6 +1,7 @@
 import json
 
 from app.ai.llm import get_llm_client
+from app.ai.financial_grounding import enrich_financial_data, ground_financial_reply
 from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.schemas.chat_schema import ChatMessage
@@ -11,7 +12,7 @@ def run_tax_agent(
     user_message: str,
     old_messages: list[ChatMessage] | None = None,
 ) -> str:
-    tax_summary = get_tax_summary()
+    tax_summary = enrich_financial_data(get_tax_summary())
 
     history_messages = [
         {
@@ -63,4 +64,8 @@ without a currency symbol and say that the currency is unspecified.
 
     reply = response.choices[0].message.content
 
-    return reply or "No response generated."
+    return ground_financial_reply(
+        reply or "",
+        tax_summary,
+        user_message,
+    )

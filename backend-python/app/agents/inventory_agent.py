@@ -1,5 +1,6 @@
 import json
 from app.ai.llm import get_llm_client
+from app.ai.financial_grounding import enrich_financial_data, ground_financial_reply
 from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.schemas.chat_schema import ChatMessage
@@ -13,7 +14,7 @@ def run_inventory_agent(
     old_messages: list[ChatMessage] | None = None,
 ) -> str:
     #Note: This allows the Inventory Agent to receive old chat messages. The history remains optional inventory_overview = get_inventory_overview()
-    inventory_analysis = get_inventory_analysis()
+    inventory_analysis = enrich_financial_data(get_inventory_analysis())
     history_messages = [
         {
             "role": message.role,
@@ -62,7 +63,11 @@ Do not invent products, quantities, or prices.
 
     reply = response.choices[0].message.content
 
-    return reply or "No response generated."
+    return ground_financial_reply(
+        reply or "",
+        inventory_analysis,
+        user_message,
+    )
 
 
 

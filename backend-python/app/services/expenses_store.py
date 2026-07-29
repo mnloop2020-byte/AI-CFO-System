@@ -1,22 +1,9 @@
 from datetime import datetime, timezone
 
-from supabase import Client, create_client
-
-from app.config.settings import SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
+from app.money import parse_money
 from app.schemas.expenses_schema import ExpenseCreate, ExpenseResponse ,ExpenseUpdate
-
-
-def get_supabase_client() -> Client:
-    if not SUPABASE_URL:
-        raise ValueError("SUPABASE_URL is missing. Add it to backend-python/.env")
-
-    if not SUPABASE_SERVICE_ROLE_KEY:
-        raise ValueError(
-            "SUPABASE_SERVICE_ROLE_KEY is missing. Add it to backend-python/.env"
-        )
-
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    # Creates and returns the Supabase client.
+from app.services.supabase_client import get_supabase_client
+from app.services.store_errors import RecordNotFoundError
 
 
 def create_expense(expense: ExpenseCreate) -> ExpenseResponse:
@@ -25,7 +12,7 @@ def create_expense(expense: ExpenseCreate) -> ExpenseResponse:
     response = (
         supabase
         .table("expenses")
-        .insert(expense.model_dump())
+        .insert(expense.model_dump(mode="json"))
         .execute()
     )
 
@@ -34,7 +21,7 @@ def create_expense(expense: ExpenseCreate) -> ExpenseResponse:
     return ExpenseResponse(
         id=row["id"],
         category=row["category"],
-        amount=float(row["amount"]),
+        amount=parse_money(row["amount"]),
         description=row.get("description"),
         vendor=row.get("vendor"),
         expense_date=row.get("expense_date"),
@@ -62,7 +49,7 @@ def get_expenses() -> list[ExpenseResponse]:
         ExpenseResponse(
             id=row["id"],
             category=row["category"],
-            amount=float(row["amount"]),
+            amount=parse_money(row["amount"]),
             description=row.get("description"),
             vendor=row.get("vendor"),
             expense_date=row.get("expense_date"),
@@ -80,7 +67,7 @@ def update_expense(
 ) -> ExpenseResponse:
     supabase = get_supabase_client()
 
-    update_data = expense.model_dump(exclude_none=True)
+    update_data = expense.model_dump(mode="json", exclude_none=True)
     # Keep only the fields the user wants to update.
 
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -95,7 +82,7 @@ def update_expense(
     )
 
     if not response.data:
-        raise ValueError("Expense not found")
+        raise RecordNotFoundError("Expense not found")
     # Stop if no expense was found with this ID.
 
     row = response.data[0]
@@ -103,7 +90,7 @@ def update_expense(
     return ExpenseResponse(
         id=row["id"],
         category=row["category"],
-        amount=float(row["amount"]),
+        amount=parse_money(row["amount"]),
         description=row.get("description"),
         vendor=row.get("vendor"),
         expense_date=row.get("expense_date"),
@@ -125,7 +112,7 @@ def delete_expense(expense_id: str) -> None:
     )
 
     if not response.data:
-        raise ValueError("Expense not found")
+        raise RecordNotFoundError("Expense not found")
     # Stop if no expense was found with this ID.
 
 

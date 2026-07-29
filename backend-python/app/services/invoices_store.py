@@ -1,49 +1,77 @@
-from supabase import Client, create_client
 from datetime import datetime, timezone
-from app.config.settings import SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
+from app.money import parse_money
 from app.schemas.invoices_schema import (
     InvoiceCreate,
     InvoiceResponse,
     InvoiceUpdate,
 )
+from app.services.supabase_client import get_supabase_client
+from app.services.store_errors import (
+    RecordConflictError,
+    RecordNotFoundError,
+    is_constraint_error,
+)
 
-def get_supabase_client() -> Client:
-    if not SUPABASE_URL:
-        raise ValueError("SUPABASE_URL is missing. Add it to backend-python/.env")
 
-    if not SUPABASE_SERVICE_ROLE_KEY:
-        raise ValueError(
-            "SUPABASE_SERVICE_ROLE_KEY is missing. Add it to backend-python/.env"
-        )
+def _ensure_unique_invoice_number(
+    invoice_number: str | None,
+    *,
+    excluding_id: str | None = None,
+) -> None:
+    if not invoice_number:
+        return
+    query = (
+        get_supabase_client()
+        .table("invoices")
+        .select("id")
+        .ilike("invoice_number", invoice_number)
+    )
+    if excluding_id:
+        query = query.neq("id", excluding_id)
+    if query.limit(1).execute().data:
+        raise RecordConflictError("An invoice with this number already exists.")
 
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    # Creates and returns the Supabase client.
+
+def _effective_status(status: str, due_date: str | None) -> str:
+    normalized = status.strip().lower()
+    if normalized != "unpaid" or not due_date:
+        return normalized
+    try:
+        due = datetime.fromisoformat(due_date.replace("Z", "+00:00")).date()
+    except ValueError:
+        return normalized
+    return "overdue" if due < datetime.now(timezone.utc).date() else normalized
+
+
+def _invoice_response(row: dict[str, object]) -> InvoiceResponse:
+    return InvoiceResponse(
+        id=str(row["id"]),
+        customer_id=str(row["customer_id"]) if row.get("customer_id") else None,
+        invoice_number=str(row["invoice_number"]),
+        total_amount=parse_money(row["total_amount"]),
+        vat_amount=parse_money(row["vat_amount"]),
+        status=_effective_status(str(row["status"]), str(row["due_date"]) if row.get("due_date") else None),
+        due_date=str(row["due_date"]) if row.get("due_date") else None,
+        file_url=str(row["file_url"]) if row.get("file_url") else None,
+        created_at=str(row["created_at"]) if row.get("created_at") else None,
+        updated_at=str(row["updated_at"]) if row.get("updated_at") else None,
+    )
 
 
 def create_invoice(invoice: InvoiceCreate) -> InvoiceResponse:
     supabase = get_supabase_client()
+    _ensure_unique_invoice_number(invoice.invoice_number)
 
     response = (
         supabase
         .table("invoices")
-        .insert(invoice.model_dump())
+        .insert(invoice.model_dump(mode="json"))
         .execute()
     )
 
     row = response.data[0]
 
-    return InvoiceResponse(
-        id=row["id"],
-        customer_id=row.get("customer_id"),
-        invoice_number=row["invoice_number"],
-        total_amount=float(row["total_amount"]),
-        vat_amount=float(row["vat_amount"]),
-        status=row["status"],
-        due_date=row.get("due_date"),
-        file_url=row.get("file_url"),
-        created_at=row.get("created_at"),
-        updated_at=row.get("updated_at"),
-    )
+    return _invoice_response(row)
     # Creates a new invoice in Supabase and returns it.
 
 
@@ -61,18 +89,7 @@ def get_invoices() -> list[InvoiceResponse]:
     )
 
     return [
-        InvoiceResponse(
-            id=row["id"],
-            customer_id=row.get("customer_id"),
-            invoice_number=row["invoice_number"],
-            total_amount=float(row["total_amount"]),
-            vat_amount=float(row["vat_amount"]),
-            status=row["status"],
-            due_date=row.get("due_date"),
-            file_url=row.get("file_url"),
-            created_at=row.get("created_at"),
-            updated_at=row.get("updated_at"),
-        )
+        _invoice_response(row)
         for row in response.data
     ]
     # Gets all invoices from Supabase.
@@ -83,9 +100,30 @@ def update_invoice(
     invoice: InvoiceUpdate,
 ) -> InvoiceResponse:
     supabase = get_supabase_client()
+    current_response = (
+        supabase
+        .table("invoices")
+        .select("total_amount,vat_amount")
+        .eq("id", invoice_id)
+        .limit(1)
+        .execute()
+    )
+    if not current_response.data:
+        raise RecordNotFoundError("Invoice not found")
 
-    update_data = invoice.model_dump(exclude_none=True)
+    if invoice.invoice_number is not None:
+        _ensure_unique_invoice_number(invoice.invoice_number, excluding_id=invoice_id)
+
+    update_data = invoice.model_dump(mode="json", exclude_none=True)
     # Keep only the invoice fields sent by the user.
+
+    current = current_response.data[0]
+    effective_total = parse_money(
+        update_data.get("total_amount", current["total_amount"])
+    )
+    effective_vat = parse_money(update_data.get("vat_amount", current["vat_amount"]))
+    if effective_vat > effective_total:
+        raise RecordConflictError("VAT amount cannot exceed total amount.")
 
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     # Update the last modified time.
@@ -99,38 +137,34 @@ def update_invoice(
     )
 
     if not response.data:
-        raise ValueError("Invoice not found")
+        raise RecordNotFoundError("Invoice not found")
     # Stop if no invoice was found with this ID.
 
     row = response.data[0]
 
-    return InvoiceResponse(
-        id=row["id"],
-        customer_id=row.get("customer_id"),
-        invoice_number=row["invoice_number"],
-        total_amount=float(row["total_amount"]),
-        vat_amount=float(row["vat_amount"]),
-        status=row["status"],
-        due_date=row.get("due_date"),
-        file_url=row.get("file_url"),
-        created_at=row.get("created_at"),
-        updated_at=row.get("updated_at"),
-    )
+    return _invoice_response(row)
     # Update one invoice and return the updated invoice.
 
 def delete_invoice(invoice_id: str) ->  None:
     supabase = get_supabase_client()
 
-    response = (
-        supabase
-        .table("invoices")
-        .delete()
-        .eq("id", invoice_id)
-        .execute()
-    )
+    try:
+        response = (
+            supabase
+            .table("invoices")
+            .delete()
+            .eq("id", invoice_id)
+            .execute()
+        )
+    except Exception as error:
+        if is_constraint_error(error, "23503"):
+            raise RecordConflictError(
+                "Invoice is linked to another record and cannot be deleted."
+            ) from error
+        raise
 
     if not response.data:
-        raise ValueError("Invoice not found")
+        raise RecordNotFoundError("Invoice not found")
     # Stop if no invoice was found with this ID. 404 
 
 

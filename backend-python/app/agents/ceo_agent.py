@@ -1,6 +1,7 @@
 import json
 
 from app.ai.llm import get_llm_client
+from app.ai.financial_grounding import enrich_financial_data, ground_financial_reply
 from app.ai.prompts import SYSTEM_PROMPT
 from app.config.settings import LLM_MODEL
 from app.schemas.chat_schema import ChatMessage
@@ -11,7 +12,7 @@ def run_ceo_agent(
     user_message: str,
     old_messages: list[ChatMessage] | None = None,
 ) -> str:
-    cfo_data = get_cfo_report_data()
+    cfo_data = enrich_financial_data(get_cfo_report_data())
 
     recent_user_messages = [
         {
@@ -157,7 +158,11 @@ Recommendations and derived insights:
 
     reply = response.choices[0].message.content
 
-    return reply or "No response generated."
+    return ground_financial_reply(
+        reply or "",
+        cfo_data,
+        user_message,
+    )
 
 
 # Note: This CEO Agent uses verified CFO data as the only source of

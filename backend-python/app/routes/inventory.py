@@ -1,5 +1,7 @@
-from fastapi import APIRouter , HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.security.authentication import require_permission
+from app.security.request_context import RequestContext
 from app.schemas.inventory_schema import (
     InventoryCreate,
     InventoryResponse,
@@ -11,26 +13,39 @@ from app.services.inventory_store import (
     update_inventory_item,
     delete_inventory_item,
 )
+from app.services.store_errors import RecordConflictError, RecordNotFoundError
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
 
 
 @router.post("", response_model=InventoryResponse)
-def add_inventory_item(item: InventoryCreate):
-    new_item = create_inventory_item(item)
+def add_inventory_item(
+    item: InventoryCreate,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
+    try:
+        new_item = create_inventory_item(item)
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
     return new_item
     # Create a new inventory item and return it.
 
 
 @router.get("", response_model=list[InventoryResponse])
-def list_inventory_items():
+def list_inventory_items(
+    _: RequestContext = Depends(require_permission("financial.read")),
+):
     items = get_inventory_items()
 
     return items
     # Get all inventory items from Supabase.
 
 @router.patch("/{item_id}", response_model=InventoryResponse)
-def edit_inventory_item(item_id: str, item: InventoryUpdate):
+def edit_inventory_item(
+    item_id: str,
+    item: InventoryUpdate,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     try:
         updated_item = update_inventory_item(
             item_id=item_id,
@@ -40,34 +55,20 @@ def edit_inventory_item(item_id: str, item: InventoryUpdate):
         return updated_item
         # Update one inventory item and return it.
 
-    except ValueError:
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Inventory item not found",
         )
-        # Return 404 if the inventory item ID does not exist.
-
-@router.patch("/{item_id}", response_model=InventoryResponse)
-def edit_inventory_item(item_id: str, item: InventoryUpdate):
-    try:
-        updated_item = update_inventory_item(
-            item_id=item_id,
-            item=item,
-        )
-
-        return updated_item
-        # Update one inventory item and return it.
-
-    except ValueError:
-        raise HTTPException(
-            status_code=404,
-            detail="Inventory item not found",
-        )
-    
         # Return 404 if the inventory item ID does not exist.
 
 @router.delete("/{item_id}")
-def remove_inventory_item(item_id: str):
+def remove_inventory_item(
+    item_id: str,
+    _: RequestContext = Depends(require_permission("financial.write")),
+):
     try:
         delete_inventory_item(item_id)
 
@@ -77,7 +78,9 @@ def remove_inventory_item(item_id: str):
         }
         # Delete one inventory item and return a success message.
 
-    except ValueError:
+    except RecordConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RecordNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Inventory item not found",
