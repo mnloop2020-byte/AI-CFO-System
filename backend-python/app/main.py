@@ -1,6 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config.settings import CORS_ALLOWED_ORIGINS
 from app.middleware.security import RequestSecurityMiddleware
 
 from app.routes.auth import router as auth_router
@@ -26,16 +27,9 @@ configure_logging()
 app = FastAPI(title="AI CFO Python Backend")
 
 
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://192.168.1.118:3000",
-]
-
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=list(CORS_ALLOWED_ORIGINS),
     allow_credentials=True,
     allow_methods=[
         "GET",

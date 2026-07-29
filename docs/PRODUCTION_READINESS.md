@@ -1,6 +1,6 @@
 # Production Readiness
 
-Last updated: 2026-07-22
+Last updated: 2026-07-29
 
 ## Pilot verdict
 
@@ -21,12 +21,17 @@ Last updated: 2026-07-22
 - [x] Migration before/after row-count audits and preserved core test data
 - [x] Backend, role/RLS/Storage, Action lifecycle, RAG/upload security, TypeScript, build, and responsive bilingual checks
 - [x] Backup and isolated restore-rehearsal procedure documented
+- [x] Environment-scoped exact CORS origins; deployed modes reject wildcard,
+  non-HTTPS, path-bearing, or implicit origin configuration
+- [x] Read-only Pilot HTTP readiness gate for liveness, configuration,
+  request IDs, exact CORS, frontend availability, security headers, and HSTS
 
 ## Production blockers
 
 - [ ] Implement and verify real MFA for privileged roles
 - [ ] Replace process-local rate limiting with a shared Redis-backed limiter
-- [ ] Configure the final HTTPS domain, secure proxy headers, exact CORS origin, and HSTS
+- [ ] Configure the final HTTPS domain and exact `CORS_ALLOWED_ORIGINS`, then
+  verify secure proxy headers and HSTS with the target-mode readiness gate
 - [ ] Run an encrypted backup and successful isolated restore rehearsal with documented checksums
 - [ ] Configure centralized log/metric collection, alerting, retention, and incident ownership
 - [ ] Complete penetration testing and dependency/license review in the target deployment environment

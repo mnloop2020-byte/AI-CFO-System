@@ -1,6 +1,6 @@
 # AI CFO System Operations Guide
 
-Last updated: 2026-07-22
+Last updated: 2026-07-29
 
 ## Product model
 
@@ -12,6 +12,9 @@ Copy the example files locally and set values in ignored environment files. Neve
 
 Backend names:
 
+- `APP_ENV`: `development`, `test`, `pilot`, or `production`
+- `CORS_ALLOWED_ORIGINS`: comma-separated exact frontend origins; required
+  with HTTPS-only values in `pilot` and `production`
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` for explicitly trusted background/admin operations only
@@ -101,6 +104,26 @@ npm run build
 ```
 
 Run the explicit live role/Storage and Action Center checks only against the confirmed development project. They never print credentials and remove only temporary Storage objects created by the check.
+
+Run the read-only local HTTP readiness gate:
+
+```powershell
+cd C:\Users\hamza\zemam-core-agent\backend-python
+& ".\.venv\Scripts\python.exe" scripts\pilot_readiness_check.py
+```
+
+For a target Pilot, pass the exact HTTPS origins. Target mode rejects loopback
+or HTTP endpoints and requires HSTS:
+
+```powershell
+& ".\.venv\Scripts\python.exe" scripts\pilot_readiness_check.py `
+  --mode target `
+  --api-url "https://api.example.com" `
+  --frontend-url "https://app.example.com"
+```
+
+The gate performs public, read-only HTTP checks only. It does not authenticate,
+read business records, write database rows, or print secrets or response bodies.
 
 ## Known limitations
 

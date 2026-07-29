@@ -42,7 +42,7 @@ Documents, Chunks, Attachments, Actions, Conversations, and Messages counts
 return to their pre-run values. Immutable action/security audit history is
 retained by design.
 
-Final automated totals: Backend `pytest` 138 passed, Frontend 43 tests passed,
+Final automated totals: Backend `pytest` 160 passed, Frontend 43 tests passed,
 TypeScript passed, and the Next.js 15.5.21 production build generated all 22
 application routes.
 

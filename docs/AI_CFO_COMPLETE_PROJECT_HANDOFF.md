@@ -475,7 +475,7 @@ Do not re-implement these completed phases without a demonstrated defect.
 
 | Verification | Latest result |
 | --- | --- |
-| Backend full Pytest suite | `138 passed` |
+| Backend full Pytest suite | `160 passed` |
 | Backend test files | 19 `test_*.py` files; parametrization makes passed cases exceed the 90 plain `def test_` definitions. |
 | Python compilation | Passed for `app` and `tests`. |
 | Frontend full test suite | `43 passed` across 8 TypeScript test files. |
@@ -902,7 +902,7 @@ Completed locally:
 - Financial Action Center with three rules, deduplication, approval, audit, and no external financial execution.
 - Arabic/English, RTL/LTR, responsive role-aware UI.
 - Supabase Local rebuilt twice from migrations.
-- Latest verification: Backend 138 passed; Frontend 43 passed; Python compilation, TypeScript, Next build, and git diff --check passed.
+- Latest verification: Backend 160 passed; Frontend 43 passed; Python compilation, TypeScript, Next build, and git diff --check passed.
 
 Current Git:
 - Branch checkpoint/pre-single-company-auth-20260720

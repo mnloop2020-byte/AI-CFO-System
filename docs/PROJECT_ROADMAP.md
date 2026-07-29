@@ -100,6 +100,13 @@ Deployment requires successful Auth, RLS, Storage policies, role tests, backup v
 
 Status: **documentation complete; deployment intentionally stopped**. The system is suitable for a controlled development Pilot with synthetic/non-sensitive data. Production remains blocked by MFA, distributed rate limiting, target-domain hardening, a real backup/restore rehearsal, centralized monitoring, and external compliance/security review.
 
+Pilot environment preparation update (2026-07-29): exact CORS origins are now
+environment-configured and fail closed in deployed modes. A read-only local or
+target HTTP readiness gate validates health, request IDs, CORS, frontend
+security headers, HTTPS, and HSTS without accessing business data. A real
+target domain and external operational services are still required before
+target-environment acceptance.
+
 ## Project safeguards
 
 - Never run `npm audit fix --force`.

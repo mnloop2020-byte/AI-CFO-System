@@ -1,11 +1,86 @@
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
+
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 ENV_PATH = BASE_DIR / ".env"
 
 load_dotenv(dotenv_path=ENV_PATH)
+
+LOCAL_CORS_ALLOWED_ORIGINS = (
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+)
+DEPLOYED_ENVIRONMENTS = {"pilot", "production"}
+
+
+def normalize_app_environment(value: str | None) -> str:
+    environment = (value or "development").strip().lower()
+    if environment not in {"development", "test", *DEPLOYED_ENVIRONMENTS}:
+        raise RuntimeError(
+            "APP_ENV must be development, test, pilot, or production."
+        )
+    return environment
+
+
+def parse_cors_allowed_origins(
+    raw_value: str | None,
+    *,
+    app_environment: str,
+) -> tuple[str, ...]:
+    if raw_value is None or not raw_value.strip():
+        if app_environment in DEPLOYED_ENVIRONMENTS:
+            raise RuntimeError(
+                "CORS_ALLOWED_ORIGINS is required for pilot and production."
+            )
+        return LOCAL_CORS_ALLOWED_ORIGINS
+
+    origins: list[str] = []
+    for candidate in raw_value.split(","):
+        origin = candidate.strip().rstrip("/")
+        if not origin:
+            continue
+        if origin == "*" or "*" in origin:
+            raise RuntimeError("CORS_ALLOWED_ORIGINS cannot contain wildcards.")
+
+        parsed = urlsplit(origin)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.netloc
+            or parsed.hostname is None
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise RuntimeError(
+                "Each CORS origin must be an exact HTTP(S) origin without "
+                "credentials, path, query, or fragment."
+            )
+        try:
+            parsed.port
+        except ValueError as error:
+            raise RuntimeError("Each CORS origin must use a valid port.") from error
+        if app_environment in DEPLOYED_ENVIRONMENTS and parsed.scheme != "https":
+            raise RuntimeError(
+                "Pilot and production CORS origins must use HTTPS."
+            )
+        if origin not in origins:
+            origins.append(origin)
+
+    if not origins:
+        raise RuntimeError("CORS_ALLOWED_ORIGINS must contain at least one origin.")
+    return tuple(origins)
+
+
+APP_ENV = normalize_app_environment(os.getenv("APP_ENV"))
+CORS_ALLOWED_ORIGINS = parse_cors_allowed_origins(
+    os.getenv("CORS_ALLOWED_ORIGINS"),
+    app_environment=APP_ENV,
+)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = os.getenv(

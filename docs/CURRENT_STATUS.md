@@ -219,8 +219,24 @@ The in-app browser completed the Expenses CRUD test and the Chat history restore
 - The live acceptance ran against Supabase Local only. Its temporary invited
   user, document, conversations, chunks, and Storage object were removed, and
   permanent record counts were restored.
-- Final verification: Backend `pytest` 138 passed; Frontend 43 tests passed;
+- Final verification: Backend `pytest` 160 passed; Frontend 43 tests passed;
   TypeScript passed; and the Next.js 15.5.21 production build generated all 22
   application routes successfully.
 - Full details and the controlled-Pilot verdict are recorded in
   `docs/MVP_ACCEPTANCE_REPORT.md`.
+
+## Pilot environment gate update (2026-07-29)
+
+- Backend CORS configuration is no longer tied to a hard-coded LAN address.
+  Development defaults allow loopback only; `pilot` and `production` require
+  an explicit HTTPS-only `CORS_ALLOWED_ORIGINS` list and reject wildcards,
+  credentials, paths, queries, and fragments.
+- `scripts/pilot_readiness_check.py` provides a public, read-only gate for
+  liveness, readiness, request IDs, exact CORS, frontend availability,
+  security headers, and target HSTS without authenticating or reading/writing
+  business data.
+- Twenty-two focused CORS/readiness tests pass; the full Backend suite reports 160
+  passed, Frontend reports 43 passed, and Python compilation, TypeScript, and
+  the Next.js production build pass. Target deployment remains blocked
+  until a real HTTPS domain, proxy/HSTS configuration, monitoring, MFA,
+  distributed rate limiting, and backup restore rehearsal are supplied.
