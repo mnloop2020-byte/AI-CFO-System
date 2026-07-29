@@ -250,3 +250,38 @@ The in-app browser completed the Expenses CRUD test and the Chat history restore
   the Next.js production build pass. Target deployment remains blocked
   until a real HTTPS domain, proxy/HSTS configuration, monitoring, MFA,
   distributed rate limiting, and backup restore rehearsal are supplied.
+
+## Monitoring foundation update (2026-07-29)
+
+- FastAPI now exposes provider-neutral Prometheus metrics through the hidden
+  `GET /internal/metrics` endpoint. A dedicated Bearer token of at least 32
+  characters is mandatory in Pilot/Production; missing or invalid
+  configuration fails closed.
+- HTTP status/latency, rate-limit decisions, dependency readiness, completed
+  LLM provider responses, and provider-reported token usage are measured with
+  bounded labels. User/company identifiers, financial values, prompts,
+  responses, document names, and raw resource IDs are never metric labels.
+- Provider-neutral alert rules cover backend/dependency outages, 5xx rates,
+  latency, Redis fail-closed events, elevated rejections/Auth failures, and LLM
+  provider errors. Backup scheduling, infrastructure metrics, notification
+  delivery, retention, and on-call routing remain target-provider gates.
+
+## Production runtime hardening update (2026-07-29)
+
+- Local non-root Backend and Frontend Dockerfiles now package the FastAPI
+  production runner and Next.js standalone output with liveness checks.
+- Pilot/Production Backend startup requires explicit trusted proxy IPs/CIDRs and
+  rejects wildcard trust. The runner uses one worker per container with bounded
+  concurrency so rate limiting and Prometheus collection remain predictable.
+- Frontend CSP now derives exact API, Supabase, and Realtime origins from
+  validated environment configuration. Deployed builds reject missing,
+  non-HTTPS, or path-bearing public origins.
+- No target deployment, external secret configuration, remote Supabase write,
+  Commit, or Push was performed. Target ingress/TLS, image scanning and pinning,
+  managed services, and deployment rehearsal remain external release gates.
+- Both images built successfully and their container liveness checks passed as
+  non-root users. The Backend image uses the pinned official CPU PyTorch wheel,
+  avoiding unnecessary CUDA runtime packages.
+- A read-only GitHub Actions quality gate now covers Backend and Frontend
+  verification plus Dockerfile contract checks without remote data access,
+  deployment permissions, or repository secrets.

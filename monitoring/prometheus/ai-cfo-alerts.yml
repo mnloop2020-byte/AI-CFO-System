@@ -1,0 +1,100 @@
+groups:
+  - name: ai-cfo-backend
+    rules:
+      - alert: AICFOBackendUnavailable
+        expr: up{job="ai-cfo-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: AI CFO backend is unavailable
+          description: The metrics target has been unreachable for more than two minutes.
+
+      - alert: AICFODependencyUnavailable
+        expr: ai_cfo_dependency_ready == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: dependency
+        annotations:
+          summary: AI CFO required dependency is unavailable
+          description: "Dependency {{ $labels.dependency }} has reported not-ready for two minutes."
+
+      - alert: AICFOHighServerErrorRate
+        expr: |
+          (
+            sum(rate(ai_cfo_http_requests_total{status_class="5xx"}[5m]))
+            /
+            clamp_min(sum(rate(ai_cfo_http_requests_total[5m])), 0.001)
+          ) > 0.05
+          and
+          sum(rate(ai_cfo_http_requests_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: AI CFO server error rate is above 5%
+          description: The five-minute 5xx ratio has remained above 5% under active traffic.
+
+      - alert: AICFOHighRequestLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(ai_cfo_http_request_duration_seconds_bucket[5m]))
+          ) > 2.5
+        for: 10m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: AI CFO p95 request latency is high
+          description: The backend p95 latency has exceeded 2.5 seconds for ten minutes.
+
+      - alert: AICFORateLimitStoreUnavailable
+        expr: increase(ai_cfo_rate_limit_events_total{outcome="unavailable"}[5m]) > 0
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: AI CFO rate-limit store is unavailable
+          description: At least one protected request failed closed because Redis was unavailable.
+
+      - alert: AICFOExcessiveRateLimitRejections
+        expr: sum(increase(ai_cfo_rate_limit_events_total{outcome="rejected"}[10m])) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: AI CFO is rejecting an unusual number of requests
+          description: More than 100 rate-limited requests were observed in ten minutes.
+
+      - alert: AICFORepeatedAuthenticationFailures
+        expr: |
+          sum(
+            increase(
+              ai_cfo_http_requests_total{
+                route=~"/auth.*",
+                status_code=~"401|403"
+              }[10m]
+            )
+          ) > 25
+        for: 5m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: AI CFO authentication failures are elevated
+          description: More than 25 authentication authorization failures occurred in ten minutes.
+
+      - alert: AICFOLLMProviderErrors
+        expr: sum(increase(ai_cfo_llm_requests_total{status_class=~"4xx|5xx"}[10m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: llm
+        annotations:
+          summary: AI CFO LLM provider errors are elevated
+          description: More than five completed provider requests failed in ten minutes.

@@ -16,6 +16,7 @@ from redis.exceptions import RedisError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
 
+from app.monitoring.metrics import metrics
 
 logger = logging.getLogger("ai_cfo_backend.requests")
 _UUID_PATH = re.compile(
@@ -247,6 +248,11 @@ class RequestSecurityMiddleware(BaseHTTPMiddleware):
                 method=request.method,
             )
         except RateLimitUnavailableError:
+            metric_route = self._metric_route(request)
+            metrics.record_rate_limit(
+                outcome="unavailable",
+                route=metric_route,
+            )
             logger.error(
                 "rate_limit_service_unavailable",
                 extra={"request_id": request_id},
@@ -259,22 +265,70 @@ class RequestSecurityMiddleware(BaseHTTPMiddleware):
         else:
             response = None
         if response is None and not allowed:
+            metric_route = self._metric_route(request)
+            metrics.record_rate_limit(
+                outcome="rejected",
+                route=metric_route,
+            )
             response = JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Try again later."},
                 headers={"Retry-After": str(retry_after)},
             )
         elif response is None:
-            response = await call_next(request)
+            try:
+                response = await call_next(request)
+            except Exception:
+                duration_seconds = time.perf_counter() - started
+                metric_route = self._metric_route(request)
+                metrics.record_http(
+                    method=request.method,
+                    route=metric_route,
+                    status_code=500,
+                    duration_seconds=duration_seconds,
+                )
+                logger.exception(
+                    "request_unhandled_exception",
+                    extra={
+                        "request_id": request_id,
+                        "method": request.method,
+                        "route": metric_route,
+                        "status_code": 500,
+                        "duration_ms": round(duration_seconds * 1000, 2),
+                    },
+                )
+                raise
         response.headers["X-Request-ID"] = request_id
+        response.headers.setdefault("Cache-Control", "no-store")
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        duration_seconds = time.perf_counter() - started
+        metric_route = self._metric_route(request)
+        metrics.record_http(
+            method=request.method,
+            route=metric_route,
+            status_code=response.status_code,
+            duration_seconds=duration_seconds,
+        )
         logger.info(
             "request_complete",
             extra={
                 "request_id": request_id,
                 "method": request.method,
-                "route": _UUID_PATH.sub("/<id>", request.url.path),
+                "route": metric_route,
                 "status_code": response.status_code,
-                "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+                "duration_ms": round(duration_seconds * 1000, 2),
             },
         )
         return response
+
+    @staticmethod
+    def _metric_route(request: Request) -> str:
+        route = request.scope.get("route")
+        template = getattr(route, "path", None)
+        if isinstance(template, str) and template:
+            return template[:160]
+        normalized_path = _UUID_PATH.sub("/<id>", request.url.path)
+        for rule in RATE_LIMIT_RULES:
+            if normalized_path.startswith(rule.prefix):
+                return rule.prefix
+        return "/<unmatched>"

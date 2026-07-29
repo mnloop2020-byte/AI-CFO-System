@@ -1,4 +1,5 @@
 import os
+import ipaddress
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -124,6 +125,56 @@ def validate_rate_limit_redis_url(
     return value
 
 
+def validate_metrics_bearer_token(
+    raw_value: str | None,
+    *,
+    app_environment: str,
+) -> str | None:
+    value = (raw_value or "").strip()
+    if not value:
+        if app_environment in DEPLOYED_ENVIRONMENTS:
+            raise RuntimeError(
+                "METRICS_BEARER_TOKEN is required for pilot and production."
+            )
+        return None
+    if len(value) < 32:
+        raise RuntimeError(
+            "METRICS_BEARER_TOKEN must contain at least 32 characters."
+        )
+    return value
+
+
+def parse_forwarded_allow_ips(
+    raw_value: str | None,
+    *,
+    app_environment: str,
+) -> tuple[str, ...]:
+    value = (raw_value or "").strip()
+    if not value:
+        if app_environment in DEPLOYED_ENVIRONMENTS:
+            raise RuntimeError(
+                "FORWARDED_ALLOW_IPS is required for pilot and production."
+            )
+        return ("127.0.0.1",)
+
+    networks: list[str] = []
+    for candidate in value.split(","):
+        network = candidate.strip()
+        if not network or network == "*":
+            raise RuntimeError(
+                "FORWARDED_ALLOW_IPS must contain explicit IP addresses or CIDRs."
+            )
+        try:
+            normalized = str(ipaddress.ip_network(network, strict=False))
+        except ValueError as error:
+            raise RuntimeError(
+                "FORWARDED_ALLOW_IPS contains an invalid IP address or CIDR."
+            ) from error
+        if normalized not in networks:
+            networks.append(normalized)
+    return tuple(networks)
+
+
 APP_ENV = normalize_app_environment(os.getenv("APP_ENV"))
 CORS_ALLOWED_ORIGINS = parse_cors_allowed_origins(
     os.getenv("CORS_ALLOWED_ORIGINS"),
@@ -136,6 +187,14 @@ RATE_LIMIT_BACKEND = parse_rate_limit_backend(
 RATE_LIMIT_REDIS_URL = validate_rate_limit_redis_url(
     os.getenv("RATE_LIMIT_REDIS_URL"),
     backend=RATE_LIMIT_BACKEND,
+    app_environment=APP_ENV,
+)
+METRICS_BEARER_TOKEN = validate_metrics_bearer_token(
+    os.getenv("METRICS_BEARER_TOKEN"),
+    app_environment=APP_ENV,
+)
+FORWARDED_ALLOW_IPS = parse_forwarded_allow_ips(
+    os.getenv("FORWARDED_ALLOW_IPS"),
     app_environment=APP_ENV,
 )
 

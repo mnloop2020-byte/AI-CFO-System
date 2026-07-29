@@ -103,7 +103,7 @@ stopped**. The system is suitable for a controlled development Pilot with
 synthetic/non-sensitive data. Production remains blocked by target
 application/verification of MFA, provisioning/verification of the TLS Redis
 service, target-domain hardening, an encrypted target backup plus private
-Storage object-byte restore, centralized monitoring, and external
+Storage object-byte restore, target monitoring integration, and external
 compliance/security review.
 
 Pilot environment preparation update (2026-07-29): exact CORS origins are now
@@ -112,6 +112,19 @@ target HTTP readiness gate validates health, request IDs, CORS, frontend
 security headers, HTTPS, and HSTS without accessing business data. A real
 target domain and external operational services are still required before
 target-environment acceptance.
+
+Monitoring foundation update (2026-07-29): protected Prometheus-compatible
+application metrics, low-cardinality labels, and provider-neutral alert rules
+are implemented locally. Production still requires selection and configuration
+of the centralized provider, infrastructure/Supabase/Redis telemetry, alert
+delivery rehearsal, retention, budgets, and named on-call ownership.
+
+Production runtime hardening update (2026-07-29): non-root Backend/Frontend
+container definitions, a bounded single-worker Uvicorn runner, explicit trusted
+proxy allowlisting, exact environment-derived Frontend CSP origins, and runtime
+deployment guidance are implemented locally. Selection and rehearsal of the
+actual hosting ingress, image registry/scanner, domain/TLS, secrets manager, and
+release/rollback process remain Production gates.
 
 ## Project safeguards
 

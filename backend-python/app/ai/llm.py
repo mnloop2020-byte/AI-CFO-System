@@ -9,6 +9,7 @@ from app.config.settings import (
     OPENROUTER_API_KEY,
     OPENROUTER_BASE_URL,
 )
+from app.monitoring.metrics import metrics
 
 
 logger = logging.getLogger("ai_cfo_backend.llm")
@@ -21,10 +22,18 @@ def _record_llm_usage(response: httpx.Response) -> None:
         response.read()
         payload = response.json()
         usage = payload.get("usage") or {}
+        model = str(payload.get("model") or "unknown")[:120]
+        metrics.record_llm(
+            model=model,
+            status_code=response.status_code,
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+            total_tokens=usage.get("total_tokens"),
+        )
         logger.info(
             "llm_request_complete",
             extra={
-                "model": str(payload.get("model") or "unknown")[:120],
+                "model": model,
                 "prompt_tokens": usage.get("prompt_tokens"),
                 "completion_tokens": usage.get("completion_tokens"),
                 "total_tokens": usage.get("total_tokens"),
@@ -32,6 +41,10 @@ def _record_llm_usage(response: httpx.Response) -> None:
             },
         )
     except Exception:
+        metrics.record_llm(
+            model="unknown",
+            status_code=response.status_code,
+        )
         logger.info(
             "llm_request_complete_without_usage",
             extra={"status_code": response.status_code},

@@ -19,6 +19,8 @@ Backend names:
   Pilot/Production
 - `RATE_LIMIT_REDIS_URL`: managed Redis connection URL; deployed environments
   require TLS using `rediss://`
+- `METRICS_BEARER_TOKEN`: dedicated random monitoring token of at least 32
+  characters; required for Pilot/Production and never exposed to the frontend
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` for explicitly trusted background/admin operations only
@@ -51,6 +53,10 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. Health endpoints are `GET /health/live` and `GET /health/ready`.
+
+The protected Prometheus endpoint is `GET /internal/metrics`. See
+`docs/MONITORING_AND_ALERTING.md`; never reuse a user access token or expose the
+monitoring token in a browser bundle.
 
 ## Company and Owner setup
 
@@ -137,6 +143,19 @@ or HTTP endpoints and requires HSTS:
 
 The gate performs public, read-only HTTP checks only. It does not authenticate,
 read business records, write database rows, or print secrets or response bodies.
+
+## Production runtime
+
+The reviewed container and reverse-proxy contract is documented in
+`docs/PRODUCTION_RUNTIME.md`. Deployed Backend instances must set an explicit
+`FORWARDED_ALLOW_IPS` allowlist and run one Uvicorn worker per container.
+Deployed Frontend images must be built with exact HTTPS API and Supabase origins;
+these values generate the CSP allowlist and are embedded at build time.
+
+The repository does not contain target secrets, ingress credentials, or an
+automatic Production deployment. TLS/HSTS, image scanning and digest pinning,
+resource limits, and external secret injection remain responsibilities of the
+selected hosting platform and human release owner.
 
 ## Known limitations
 

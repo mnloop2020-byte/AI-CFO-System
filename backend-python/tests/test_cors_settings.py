@@ -5,7 +5,9 @@ from app.config.settings import (
     LOCAL_CORS_ALLOWED_ORIGINS,
     normalize_app_environment,
     parse_cors_allowed_origins,
+    parse_forwarded_allow_ips,
     parse_rate_limit_backend,
+    validate_metrics_bearer_token,
     validate_rate_limit_redis_url,
 )
 from app.main import app
@@ -104,6 +106,56 @@ def test_redis_backend_requires_a_url():
             backend="redis",
             app_environment="development",
         )
+
+
+@pytest.mark.parametrize("environment", ["pilot", "production"])
+def test_deployed_environments_require_metrics_token(environment):
+    with pytest.raises(RuntimeError, match="METRICS_BEARER_TOKEN"):
+        validate_metrics_bearer_token(
+            None,
+            app_environment=environment,
+        )
+
+
+def test_metrics_token_must_have_sufficient_entropy_length():
+    with pytest.raises(RuntimeError, match="32"):
+        validate_metrics_bearer_token(
+            "too-short",
+            app_environment="development",
+        )
+    assert (
+        validate_metrics_bearer_token(
+            "m" * 32,
+            app_environment="production",
+        )
+        == "m" * 32
+    )
+
+
+@pytest.mark.parametrize("environment", ["pilot", "production"])
+def test_deployed_environments_require_explicit_trusted_proxies(environment):
+    with pytest.raises(RuntimeError, match="FORWARDED_ALLOW_IPS"):
+        parse_forwarded_allow_ips(
+            None,
+            app_environment=environment,
+        )
+
+
+def test_trusted_proxy_configuration_rejects_wildcards_and_invalid_values():
+    with pytest.raises(RuntimeError, match="explicit"):
+        parse_forwarded_allow_ips(
+            "*",
+            app_environment="production",
+        )
+    with pytest.raises(RuntimeError, match="invalid"):
+        parse_forwarded_allow_ips(
+            "proxy.internal",
+            app_environment="production",
+        )
+    assert parse_forwarded_allow_ips(
+        "10.0.0.4,10.0.0.0/24,10.0.0.4",
+        app_environment="production",
+    ) == ("10.0.0.4/32", "10.0.0.0/24")
 
 
 def test_default_app_cors_allows_loopback_and_rejects_old_lan_origin():

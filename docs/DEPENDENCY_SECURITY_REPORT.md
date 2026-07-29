@@ -179,3 +179,11 @@ optional binary packages.
 untracked document and is not part of this dependency remediation report.
 
 No commit or push was performed.
+
+## Monitoring dependency amendment — 2026-07-29
+
+`prometheus-client==0.25.0`, the official Python client, was added directly for
+the protected provider-neutral metrics registry. The exact version supports the
+current Python runtime. After installation, `pip check` passed and `pip-audit`
+reported no known vulnerabilities. No other dependency version changed in the
+monitoring phase.

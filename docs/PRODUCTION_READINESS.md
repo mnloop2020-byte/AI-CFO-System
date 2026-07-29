@@ -30,6 +30,11 @@ Last updated: 2026-07-29
 - [x] Redis-backed distributed rate limiter implemented with atomic counters,
   TLS-only deployed configuration, fail-closed behavior, and a two-instance
   local Redis integration test
+- [x] Protected low-cardinality Prometheus metrics and provider-neutral alert
+  rules implemented locally
+- [x] Non-root Backend/Frontend container definitions, exact deployed Frontend
+  CSP origins, explicit trusted-proxy validation, and bounded Uvicorn runtime
+  prepared locally
 
 ## Production blockers
 
@@ -39,9 +44,12 @@ Last updated: 2026-07-29
   availability alerts, capacity, and outage behavior in the target environment
 - [ ] Configure the final HTTPS domain and exact `CORS_ALLOWED_ORIGINS`, then
   verify secure proxy headers and HSTS with the target-mode readiness gate
+- [ ] Build, scan, pin, and exercise the release containers behind the selected
+  target ingress with exact `FORWARDED_ALLOW_IPS`
 - [x] Complete a local isolated database restore rehearsal with documented checksums
 - [ ] Run an encrypted target backup and restore private Storage object bytes in an isolated target environment
-- [ ] Configure centralized log/metric collection, alerting, retention, and incident ownership
+- [ ] Connect centralized log/metric collection, validate alert delivery,
+  retention, and incident ownership in the target environment
 - [ ] Complete penetration testing and dependency/license review in the target deployment environment
 - [ ] Confirm regional privacy, retention, accounting, tax, and data-processing requirements with qualified professionals
 - [ ] Define production Supabase/OpenRouter budgets, quotas, rotation, outage behavior, and on-call contacts

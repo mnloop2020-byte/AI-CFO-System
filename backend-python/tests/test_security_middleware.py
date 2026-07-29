@@ -1,6 +1,8 @@
 import asyncio
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 from app.middleware.security import (
@@ -8,6 +10,7 @@ from app.middleware.security import (
     RateLimitRule,
     RateLimitUnavailableError,
     RedisRateLimiter,
+    RequestSecurityMiddleware,
 )
 from app.utils.logger import sanitize_log_text
 
@@ -116,3 +119,22 @@ def test_log_sanitizer_redacts_tokens_emails_and_record_ids() -> None:
     assert "secret.token" not in sanitized
     assert "user@example.com" not in sanitized
     assert "10000000-0000-4000-8000-000000000001" not in sanitized
+
+
+def test_security_middleware_sets_private_api_response_headers() -> None:
+    app = FastAPI()
+    app.add_middleware(
+        RequestSecurityMiddleware,
+        limiter=InMemoryRateLimiter(),
+    )
+
+    @app.get("/example")
+    async def example() -> dict[str, str]:
+        return {"status": "ok"}
+
+    response = TestClient(app).get("/example")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-request-id"]

@@ -29,6 +29,9 @@ Last updated: 2026-07-22
   hashed client/route keys and fails closed if Redis is unavailable. Development
   and isolated tests may use the in-memory backend explicitly.
 - `/health/live` confirms the process is running. `/health/ready` confirms required service configuration exists without returning secrets.
+- `/internal/metrics` exposes only bounded operational labels and requires a
+  dedicated backend-only Bearer token. It never emits user/company identifiers,
+  financial values, prompts, responses, document names, or raw resource IDs.
 - Owner/Admin can read immutable `security_audit_events`; event rows store operation, entity, actor, timestamp, and safe field names only.
 
 ## Backup procedure (non-destructive)
