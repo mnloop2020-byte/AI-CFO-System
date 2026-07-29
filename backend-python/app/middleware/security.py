@@ -11,6 +11,7 @@ from typing import Protocol
 from uuid import uuid4
 
 from fastapi import Request
+from fastapi.security.utils import get_authorization_scheme_param
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -23,6 +24,18 @@ _UUID_PATH = re.compile(
     r"/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-"
     r"[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"
 )
+
+
+def rate_limit_client_key(request: Request) -> str:
+    """Return a stable, non-secret key even when a managed proxy hides the IP."""
+    scheme, credentials = get_authorization_scheme_param(
+        request.headers.get("Authorization")
+    )
+    if scheme.lower() == "bearer" and credentials:
+        token_digest = hashlib.sha256(credentials.encode("utf-8")).hexdigest()
+        return f"bearer:{token_digest}"
+    peer = request.client.host if request.client else "unknown"
+    return f"peer:{peer}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -240,7 +253,7 @@ class RequestSecurityMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         started = time.perf_counter()
         request_id = request.headers.get("x-request-id") or str(uuid4())
-        client_key = request.client.host if request.client else "unknown"
+        client_key = rate_limit_client_key(request)
         try:
             allowed, retry_after = await self.limiter.check(
                 client_key=client_key,

@@ -11,6 +11,7 @@ out/
 dist/
 coverage/
 *.tsbuildinfo
+.vercel/
 
 # Python
 __pycache__/

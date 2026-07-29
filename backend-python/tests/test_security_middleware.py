@@ -1,7 +1,8 @@
 import asyncio
+import hashlib
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from redis.exceptions import ConnectionError as RedisConnectionError
 
@@ -11,6 +12,7 @@ from app.middleware.security import (
     RateLimitUnavailableError,
     RedisRateLimiter,
     RequestSecurityMiddleware,
+    rate_limit_client_key,
 )
 from app.utils.logger import sanitize_log_text
 
@@ -138,3 +140,25 @@ def test_security_middleware_sets_private_api_response_headers() -> None:
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-request-id"]
+
+
+def test_rate_limit_key_hashes_bearer_token_and_falls_back_to_peer() -> None:
+    app = FastAPI()
+
+    @app.get("/key")
+    async def key(request: Request):
+        return {"key": rate_limit_client_key(request)}
+
+    client = TestClient(app, client=("203.0.113.10", 50000))
+    token = "pilot-access-token"
+    authenticated = client.get(
+        "/key",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    anonymous = client.get("/key")
+
+    authenticated_key = authenticated.json()["key"]
+    assert authenticated_key.startswith("bearer:")
+    assert token not in authenticated_key
+    assert authenticated_key.endswith(hashlib.sha256(token.encode()).hexdigest())
+    assert anonymous.json()["key"] == "peer:203.0.113.10"

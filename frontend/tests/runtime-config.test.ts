@@ -62,3 +62,15 @@ test("development runtime uses local defaults explicitly", () => {
   assert.equal(runtimeConfig.supabaseOrigin, "http://127.0.0.1:54321");
   assert.equal(runtimeConfig.supabaseRealtimeOrigin, "ws://127.0.0.1:54321");
 });
+
+test("Vercel deployments fail closed without an explicit deployment mode", () => {
+  assert.throws(
+    () =>
+      createRuntimeSecurityConfig({
+        VERCEL: "1",
+        NEXT_PUBLIC_API_URL: "https://api.example.test",
+        NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+      }),
+    /DEPLOYMENT_ENV is required/,
+  );
+});

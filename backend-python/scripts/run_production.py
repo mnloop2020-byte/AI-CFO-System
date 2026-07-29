@@ -31,7 +31,7 @@ def main() -> None:
         raise RuntimeError(
             "The Production runner requires APP_ENV=pilot or production."
         )
-    port = bounded_integer("PORT", 8000, 1, 65535)
+    port = bounded_integer("PORT", 8080, 1, 65535)
     concurrency = bounded_integer(
         "UVICORN_LIMIT_CONCURRENCY",
         200,

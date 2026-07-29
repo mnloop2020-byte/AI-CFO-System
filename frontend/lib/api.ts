@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (!API_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is required.");
+}
 
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;

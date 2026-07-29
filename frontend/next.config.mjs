@@ -51,6 +51,12 @@ export function normalizePublicOrigin(value, name, environment, fallback) {
 }
 
 export function createRuntimeSecurityConfig(environmentVariables = process.env) {
+  if (
+    environmentVariables.VERCEL === "1" &&
+    !environmentVariables.DEPLOYMENT_ENV
+  ) {
+    throw new Error("DEPLOYMENT_ENV is required for Vercel deployments.");
+  }
   const environment = normalizeDeploymentEnvironment(
     environmentVariables.DEPLOYMENT_ENV,
   );
