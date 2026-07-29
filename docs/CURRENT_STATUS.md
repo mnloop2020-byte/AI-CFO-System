@@ -211,12 +211,16 @@ The in-app browser completed the Expenses CRUD test and the Chat history restore
   origin, so its protected page captures show the designed error state.
   Authenticated API and live integration scripts independently verified the
   same backend workflows.
-- OpenRouter currently returns HTTP `402 Payment Required`. Live AI chat and
-  LLM-written report narratives are therefore blocked by an external account
-  condition; deterministic calculations, PDFs, RAG indexing/retrieval, CRUD,
-  Auth, and Action Center remain functional.
-- Final verification: Backend `pytest` 117 passed; Python compilation passed;
-  Frontend 32 tests passed; TypeScript passed; and the Next.js 15.5.19
-  production build generated all 22 application routes successfully.
+- OpenRouter access was restored and verified on 2026-07-29 without exposing
+  the server credential. Live Arabic and English comprehensive-summary prompts
+  returned grounded `live_financial_data` responses, while explicit Arabic and
+  English document questions returned `uploaded_documents` responses with one
+  deduplicated source and no internal agent JSON.
+- The live acceptance ran against Supabase Local only. Its temporary invited
+  user, document, conversations, chunks, and Storage object were removed, and
+  permanent record counts were restored.
+- Final verification: Backend `pytest` 138 passed; Frontend 43 tests passed;
+  TypeScript passed; and the Next.js 15.5.21 production build generated all 22
+  application routes successfully.
 - Full details and the controlled-Pilot verdict are recorded in
   `docs/MVP_ACCEPTANCE_REPORT.md`.

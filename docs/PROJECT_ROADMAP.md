@@ -89,9 +89,10 @@ Status: **complete for Pilot**. Automated backend/financial/RAG/upload/security 
 MVP acceptance update: the linked `E2E-MVP-` scenario passed CRM, reports,
 private Storage, RAG/pgvector, Action lifecycle, deduplication, idempotency,
 and cleanup. Language persistence and narrow Login overflow were corrected.
-Live LLM acceptance is temporarily blocked because the configured OpenRouter
-account returns HTTP `402`; this is an external Pilot blocker, not a database
-or deterministic-calculation failure.
+Live LLM acceptance completed on 2026-07-29 against Supabase Local: Arabic and
+English comprehensive summaries used live financial data, explicit Arabic and
+English document questions used uploaded-document sources, citations were
+deduplicated, and no internal agent JSON was exposed.
 
 ## Phase 8: Delivery and deployment readiness
 

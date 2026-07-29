@@ -4,7 +4,7 @@
 > **Prepared:** 2026-07-28  
 > **Product model:** Single Company + Multiple Users  
 > **Backend:** Python + FastAPI (not Node.js)  
-> **Current verdict:** suitable for a controlled development Pilot with synthetic or non-sensitive data after the local working tree is safely versioned and the live AI provider is restored; not Production-ready.
+> **Current verdict:** suitable for a controlled development Pilot with synthetic or non-sensitive data; the release candidate is published and live AI provider acceptance passed, but the system is not Production-ready.
 
 ## 1. Executive Summary
 
@@ -12,10 +12,10 @@ AI CFO System is a bilingual financial-operations application that combines auth
 
 The product already contains real FastAPI/Supabase CRUD for customers, sales, expenses, inventory, and invoices; live dashboard metrics; company settings; profiles, members, invitations, and role enforcement; private reports, attachments, and RAG documents; bilingual invoice/report PDFs; a multi-agent CFO chat; and deterministic actions for overdue invoices, low inventory, and expense review. Financial values follow a two-decimal `Decimal`/PostgreSQL `numeric(18,2)` policy rather than binary floating point.
 
-The current code and latest verification evidence support a **controlled Pilot**, not a public Production release. The two immediate release risks are:
+The current code and latest verification evidence support a **controlled Pilot**, not a public Production release. The immediate remaining release risks are:
 
-1. the present local working tree contains substantial uncommitted/untracked work and the active branch is not published to GitHub;
-2. the latest verified OpenRouter response is HTTP `402 Payment Required`, so live AI chat and LLM-authored narratives still need a successful real-provider acceptance test.
+1. Production MFA, distributed rate limiting, centralized monitoring, target-domain hardening, and a backup/restore rehearsal are incomplete;
+2. real SMTP delivery and Production provider budgets, quotas, rotation, and outage procedures are not configured.
 
 No automatic payment, purchase, bank transaction, or external financial execution exists. Email delivery is implemented behind a provider abstraction, but no real SMTP provider is configured in the verified environment.
 
@@ -64,14 +64,20 @@ An invited user signs in through Supabase Auth, the backend resolves their only 
 | --- | --- | --- |
 | Prototype | Exceeded | The product has persistent data, Auth/RLS, PDFs, RAG, agents, tests, and operational workflows. |
 | MVP | Completed | Core financial CRUD, settings, Auth, reports, documents, chat contract, and Action Center exist. |
-| Controlled Pilot | Conditionally ready | Deterministic workflows and local acceptance passed. The local work must be safely committed/published, and full AI acceptance needs a working provider. Use synthetic/non-sensitive data until operational controls are approved. |
+| Controlled Pilot | Ready with restrictions | Deterministic workflows, protected source publication, and local live-provider acceptance passed. Use synthetic/non-sensitive data until operational controls are approved. |
 | Public Production | Not ready | MFA, distributed rate limiting, target-domain hardening, centralized monitoring, backup restore rehearsal, SMTP approval, security/compliance review, and deployment controls remain. |
 
 ### Important qualification
 
-The latest documented live OpenRouter check on 2026-07-25 returned `402 Payment Required`. This handoff did not make another paid external request. Therefore, current provider credit is **not re-proven** here. Non-LLM functionality remains usable, but a Pilot that promises live AI responses must restore the provider and pass Arabic/English live acceptance.
+On 2026-07-29, a real OpenRouter completion and four authenticated live chat
+acceptance prompts passed against Supabase Local. Arabic and English financial
+summaries used `live_financial_data`; explicit Arabic and English document
+questions used `uploaded_documents` with one deduplicated source. Temporary
+acceptance data was removed. Production credit limits and operational budgets
+still require explicit configuration and monitoring.
 
-The current local branch also contains work newer than its committed `HEAD`. Passing tests cover that local state, but those changes are not yet protected by a commit or uploaded to GitHub.
+The protected release candidate was committed and published to the remote
+branch at `9ac28df25de8e18c5e1e0fd9edb49245f7fa2793`.
 
 ## 4. Actual Technology Stack
 
@@ -419,10 +425,10 @@ The following phases are already represented in code, tests, migrations, or curr
     - Next/PostCSS/sharp/PyTorch/setuptools updates; latest audit report records zero known npm/pip vulnerabilities.
 12. **Database reproducibility**
     - Supabase Local built twice from empty migrations; schema, constraints, RLS/RBAC, Storage, and CRUD verified.
-13. **Final product/UI polish in the local working tree**
+13. **Final product/UI polish**
     - Actual desktop/tablet/mobile and Arabic/English inspection; role-aware write controls; readable action evidence; Auth request deduplication; local CSP/proxy and Next lockfile warning resolution.
 
-Do not re-implement these phases merely because some work is uncommitted. First protect and review the existing working tree.
+Do not re-implement these completed phases without a demonstrated defect.
 
 ## 10. Feature Status Matrix
 
@@ -444,10 +450,10 @@ Do not re-implement these phases merely because some work is uncommitted. First 
 | Invoice Delivery / SMTP | Blocked | Provider abstraction and safe `503`; mock contract passes. | Approved SMTP service, secrets, domain reputation, live non-production send. |
 | Documents | Completed and verified | Private upload/status/delete and security checks. | Production malware scanning is recommended. |
 | RAG | Completed and verified | Extraction, chunks, vector(384), source citation, deletion. | Live adversarial/security testing in target environment. |
-| AI Chat contract and rendering | Completed and verified | Typed v1 contract, safe fallback, Markdown, no internal JSON. | Live provider acceptance blocked by last verified 402. |
-| Agent Routing | Completed but needs final verification | Deterministic routing tests and fixed comprehensive-summary/document separation. | Re-test real Arabic/English prompts after provider credit. |
-| LLM-generated narratives | Blocked | Latest live OpenRouter evidence is HTTP 402. | Restore credit or approve another compatible provider/model. |
-| Reports | Completed and verified | Real generation, PDF, metadata, private Storage. | LLM prose path needs provider acceptance; deterministic output remains. |
+| AI Chat contract and rendering | Completed and verified | Typed v1 contract, safe fallback, Markdown, no internal JSON, and live Arabic/English provider checks passed. | Monitor provider availability and budget. |
+| Agent Routing | Completed and verified | Deterministic routing and live comprehensive-summary/document-source separation passed. | Continue regression tests when routing changes. |
+| LLM-generated narratives | Completed for Pilot | Real provider response and grounded bilingual chat acceptance passed. | Production budget, quota, and outage procedures remain. |
+| Reports | Completed and verified | Real generation, PDF, metadata, private Storage, and live-provider path accepted. | Target Production Storage smoke test. |
 | Report History / Download | Completed and verified | RLS history and short-lived signed URL tests. | Target Production Storage smoke test. |
 | Financial Action Center | Completed and verified | Three rules, permissions, lifecycle, audit, dedup/idempotency. | External execution remains intentionally disabled. |
 | Company Settings | Completed and verified | Real company API/UI, validation, role boundaries. | None for Pilot. |
@@ -505,7 +511,7 @@ No remote reset or write was performed for this handoff.
 
 ### Not fully proven
 
-- Current OpenRouter credit and successful real LLM response after the last `402`.
+- Production OpenRouter budget, quota, key-rotation, and outage behavior.
 - Real SMTP delivery (no configured provider and no live mail sent).
 - MFA.
 - Production domain/proxy/CORS/HSTS configuration.
@@ -516,53 +522,29 @@ No remote reset or write was performed for this handoff.
 
 ## 12. Current Git and Working Tree Status
 
-As inspected on 2026-07-28 before adding this handoff:
+Verified on 2026-07-29 before this documentation update:
 
 - **Branch:** `checkpoint/pre-single-company-auth-20260720`
-- **HEAD:** `b0f7d36314d7c96b9de4beb26a472095c5926d5d`
-- **HEAD subject:** `test: complete MVP end-to-end validation and UI polish`
+- **Protected release commit:** `9ac28df25de8e18c5e1e0fd9edb49245f7fa2793`
+- **Commit subject:** `feat: finalize pilot hardening and project handoff`
 - **Remote:** `origin` → GitHub repository `mnloop2020-byte/AI-CFO-System`
-- **Upstream:** the current branch has no configured remote upstream and does not exist on the inspected remote.
-- **Compared with `origin/main`:** 22 local commits not on `origin/main`; one remote commit not in the current local branch.
-- **Remote-only commit:** `d273c59 Delete desktop.ini`.
-- **Staged changes:** none.
-- **Tracked modified files before this handoff:** 61.
-- **Untracked files before this handoff:** 17.
-- **Tracked diff:** 1,547 insertions and 1,110 deletions across the 61 modified files.
-
-The working tree contains the exact-money phase, dependency remediation, local bootstrap work, indexes/verification SQL, and final UI/permission polish. Important untracked files include:
-
-- `backend-python/app/money.py` and money/bootstrap tests;
-- money, dependency, database-bootstrap, and production-remediation documents;
-- `frontend/lib/money.ts` and its tests;
-- root Supabase CLI `package.json` / lock file;
-- Supabase Local config, foundational migration, final indexes, and verification SQL.
-
-After this task, `docs/AI_CFO_COMPLETE_PROJECT_HANDOFF.md` is one additional untracked file. No existing change was deleted, staged, committed, or pushed.
+- **Upstream:** `origin/checkpoint/pre-single-company-auth-20260720`
+- **Ahead/behind before this documentation update:** `0/0`
+- **Sensitive and generated paths:** `.env`, `.venv`, `.next`, and
+  `node_modules` were excluded from the commit.
 
 ### GitHub conclusion
 
-**Not all current project files are on GitHub.** The active local branch is unpublished, its 22 local commits are not on `origin/main`, and the current working tree adds further uncommitted work. Do not switch accounts, machines, or clean the worktree until this state is reviewed and safely versioned. A push requires explicit user approval.
+The protected release candidate is published on the current remote branch.
+This 2026-07-29 provider-acceptance documentation update is a subsequent local
+documentation change and requires a separate explicit commit/push decision.
 
 ## 13. Remaining Work for Pilot
 
-Complete these in order:
+The release candidate publication and live AI provider acceptance are complete.
+Continue with:
 
-1. **Stabilize the local release candidate**
-   - Review the 61 modified and now 18 untracked files by phase.
-   - Confirm generated/temporary files are excluded.
-   - Re-run the final compact verification only if the review changes files.
-   - Create organized commits and publish a branch only after explicit user approval.
-   - Completion criterion: clean working tree, known commit SHA, remote branch visible, no secrets/artifacts.
-
-2. **Resolve the live AI provider blocker**
-   - Restore OpenRouter credit or explicitly approve a compatible provider/model change.
-   - Do not silently change models.
-   - Test Arabic and English: comprehensive financial summary, a specialized agent query, a document-only query, and an unsupported-data question.
-   - Confirm `source_mode`, citations, grounding, no internal JSON, and no invented amounts.
-   - Completion criterion: real provider returns successful grounded answers and usage/status logs contain no sensitive content.
-
-3. **Run final acceptance from the protected release commit**
+1. **Run target-environment Pilot acceptance from the protected release commit**
    - Supabase Local only unless a separate remote approval is given.
    - Exercise Auth/roles, CRM/Dashboard, PDFs/attachments, RAG, reports, actions, and chat.
    - Verify Viewer write controls, `401/403`, Arabic/English, RTL/LTR, and mobile.
@@ -614,9 +596,8 @@ Complete these in order:
 
 | Risk | Severity | Impact and evidence | Resolution | Gate |
 | --- | --- | --- | --- | --- |
-| OpenRouter returned `402` | High | Live AI chat/narratives unavailable in latest verified live check. | Restore credit or approve provider/model, then run grounded live acceptance. | Full AI Pilot and Production |
-| Large unversioned working tree | High | 61 modified plus now 18 untracked files; branch unpublished. Loss or accidental overwrite is possible. | Review by phase, verify, commit, publish approved branch. | Pilot handoff |
-| Local branch diverges from GitHub | High | 22 local commits absent from `origin/main`; one remote-only commit. | Reconcile intentionally; never force-push or reset without review. | Pilot handoff |
+| Production provider operations undefined | Medium | Pilot provider checks pass, but Production budgets, quotas, key rotation, and outage behavior are not approved. | Define limits, alerts, rotation, and fallback procedures. | Production |
+| Provider-acceptance docs not yet published | Low | This 2026-07-29 status update follows the protected release commit. | Review and commit/push the documentation update explicitly. | Handoff |
 | Remote migration state not revalidated here | High | Local migrations include untracked foundational/index files. | Read-only history/schema audit, snapshot/hash, explicit approval before any remote write. | Remote Pilot/Production |
 | No real SMTP provider | Medium | Email endpoint safely returns `503`; mock only. | Decide Pilot scope or configure approved service and test. | Email Pilot / Production |
 | MFA deferred | High | Password compromise has greater impact for privileged users. | Implement and enforce MFA before Production. | Production |
@@ -803,7 +784,8 @@ Only publishable values belong under `NEXT_PUBLIC_`. Never create a frontend Ser
 
 - Do not rebuild completed Auth/RLS, Decimal, dependency, database-bootstrap, RAG, report, attachment, or Action Center phases without a demonstrated defect.
 - Do not discard, reset, checkout, clean, stash, or overwrite the current working tree.
-- Do not assume GitHub has the current code; it does not.
+- Do not assume later local documentation changes are already on GitHub; check
+  Git status and upstream state first.
 - Do not modify applied migration files.
 - Do not use remote Supabase, repair history, push migrations, or reset data without an exact independent approval.
 - Do not use `float`/JavaScript `number` for monetary calculations.
@@ -820,20 +802,10 @@ Only publishable values belong under `NEXT_PUBLIC_`. Never create a frontend Ser
 
 ## 20. Exact Recommended Next Step
 
-**Protect the verified local state before doing more feature work.**
-
-1. Run a read-only Git review grouped by phase:
-   - exact-money and database-bootstrap files;
-   - dependency updates;
-   - final UI/permission polish;
-   - this handoff document.
-2. Confirm no `.env`, credentials, `.next`, `.venv`, local database data, generated PDFs, screenshots, or temporary artifacts are included.
-3. If no code changes are needed, use the already passing verification evidence; if the review changes files, run the compact final suites once.
-4. Present the intended commits and remote branch name to the user.
-5. Only after explicit approval, create organized commits and push the branch without force.
-6. Then restore OpenRouter credit and run the four live AI acceptance prompts.
-
-This is higher priority than adding another feature because the current verified work is not yet safely represented on GitHub.
+Review and publish this provider-acceptance documentation update when approved,
+then prepare a controlled Pilot environment with Production-like domain,
+monitoring, backup, provider-budget, and access controls. Do not deploy to
+Production until the remaining Production gates are complete.
 
 ## 21. Instructions for the Next ChatGPT/Codex Account
 
@@ -854,7 +826,11 @@ This is higher priority than adding another feature because the current verified
 
 ### Current position
 
-The deterministic product, local database bootstrap, security boundaries, PDFs, RAG, Actions, exact money, dependency remediation, and UI polish are implemented and verified locally. The next task is to protect the unversioned local release candidate, then restore the live AI provider and run final provider acceptance.
+The deterministic product, local database bootstrap, security boundaries, PDFs,
+RAG, Actions, exact money, dependency remediation, UI polish, protected branch
+publication, and live bilingual provider acceptance are complete for the
+controlled Pilot. The next task is target-environment Pilot preparation and
+operational control validation.
 
 ### Constraints to preserve
 
@@ -930,20 +906,20 @@ Completed locally:
 
 Current Git:
 - Branch checkpoint/pre-single-company-auth-20260720
-- HEAD b0f7d36314d7c96b9de4beb26a472095c5926d5d
-- Branch has no remote upstream.
-- 22 local commits are not on origin/main; one origin/main commit is not local.
-- Before the handoff file: 61 tracked modified and 17 untracked files, nothing staged.
-- Therefore the current project is NOT fully uploaded to GitHub.
-- Preserve every local change; do not reset/checkout/clean/stash.
+- Protected release commit 9ac28df25de8e18c5e1e0fd9edb49245f7fa2793
+- Upstream origin/checkpoint/pre-single-company-auth-20260720
+- Protected release commit is uploaded; this provider-acceptance documentation
+  update is a later local change until explicitly committed and pushed.
 
 Current blockers:
-1) Safely review/version/publish the local release candidate after explicit approval.
-2) Latest verified OpenRouter call returned HTTP 402; restore credit/provider and run live Arabic/English AI acceptance.
-3) Production still requires MFA, shared rate limiting, staging/CI-CD, centralized monitoring, restore rehearsal, real SMTP decision, domain hardening, and security/legal/privacy/tax review.
+1) Production still requires MFA, shared rate limiting, staging/CI-CD,
+centralized monitoring, restore rehearsal, a real SMTP decision, domain
+hardening, provider operational controls, and security/legal/privacy/tax review.
 
 Exact next task:
-Perform a read-only phase-grouped review of all modified/untracked files, exclude secrets/artifacts, present an organized commit/push plan, and wait for explicit user approval. After the state is protected, restore OpenRouter and test live grounded chat.
+Review and publish the provider-acceptance documentation update when approved,
+then prepare and validate a controlled target Pilot environment without
+automatic Production deployment.
 
 Mandatory rules:
 - Do not use remote Supabase or alter migration history without separate explicit approval.

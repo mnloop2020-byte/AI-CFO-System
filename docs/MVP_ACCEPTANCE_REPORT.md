@@ -1,6 +1,6 @@
 # MVP End-to-End Acceptance Report
 
-Date: 2026-07-25
+Date: 2026-07-29
 
 Scope: controlled Single Company + Multiple Users Pilot
 
@@ -12,11 +12,10 @@ The current build is suitable for a controlled development Pilot with
 synthetic or non-sensitive data. It is not Production-ready.
 
 The business records, Auth/RLS boundaries, private file workflows, PDF
-generation, RAG indexing/retrieval, and Financial Action lifecycle passed.
-The external OpenRouter account currently returns HTTP `402`, so live AI
-chat and LLM-written report narratives are unavailable until that external
-account has usable credit. Deterministic calculations and non-LLM product
-features remain available.
+generation, RAG indexing/retrieval, Financial Action lifecycle, and live AI
+provider acceptance passed. Arabic and English financial-summary prompts used
+current financial records, while explicit document prompts used uploaded
+documents with deduplicated citations. Internal agent JSON was not exposed.
 
 ## Route and state coverage
 
@@ -26,7 +25,7 @@ features remain available.
 | Roles | Owner, Admin, Accountant, Viewer, invitation and Storage boundaries | Passed |
 | CRM | Customers, Sales, Expenses, Inventory, Invoices | Passed; temporary rows removed |
 | Dashboard | Live source endpoints and invalidation contracts | Passed through API/tests; browser API calls were blocked by the in-app browser's localhost-port policy |
-| Chat | Arabic/English contract, Markdown, no internal JSON | Automated contract passed; live provider blocked by OpenRouter `402` |
+| Chat | Arabic/English contract, Markdown, no internal JSON | Automated contract and four live provider/source-mode checks passed |
 | Reports | Arabic/English PDF, private Storage, history, signed download | Passed |
 | RAG | Safe text upload, `ready`, chunks, pgvector retrieval, private deletion | Passed |
 | Actions | Three rules, deduplication, approval, rejection, replay, audit | Passed |
@@ -43,9 +42,9 @@ Documents, Chunks, Attachments, Actions, Conversations, and Messages counts
 return to their pre-run values. Immutable action/security audit history is
 retained by design.
 
-Final automated totals: Backend `pytest` 117 passed, Frontend 32 tests passed,
-Python compilation and TypeScript passed, and the Next.js production build
-generated all 22 application routes.
+Final automated totals: Backend `pytest` 138 passed, Frontend 43 tests passed,
+TypeScript passed, and the Next.js 15.5.21 production build generated all 22
+application routes.
 
 ## UI/UX findings
 
@@ -63,7 +62,8 @@ generated all 22 application routes.
 
 ## External and Production blockers
 
-1. Restore OpenRouter billing/credit before live AI acceptance can pass.
+1. Define and monitor the Production OpenRouter budget, quota, key rotation,
+   and provider-outage behavior.
 2. Configure and approve an SMTP provider before any real invoice email.
 3. Implement MFA and distributed rate limiting before Production.
 4. Complete target-domain, centralized monitoring, backup/restore rehearsal,
