@@ -24,7 +24,10 @@ Last updated: 2026-07-22
 
 - Request logs are structured JSON. UUIDs, emails, and Bearer tokens are redacted; request bodies, query strings, financial values, and document contents are not logged.
 - LLM calls have bounded retries and timeouts. Only model/token usage and status are logged, never prompts or replies.
-- Auth, Chat, Reports, Upload, and Action write routes have a per-process rate limiter. A multi-instance production deployment must replace this with a shared Redis-backed limiter before public launch.
+- Auth, Chat, Reports, Upload, and Action write routes use a Redis-backed shared
+  limiter in deployed environments. The atomic fixed-window operation stores
+  hashed client/route keys and fails closed if Redis is unavailable. Development
+  and isolated tests may use the in-memory backend explicitly.
 - `/health/live` confirms the process is running. `/health/ready` confirms required service configuration exists without returning secrets.
 - Owner/Admin can read immutable `security_audit_events`; event rows store operation, entity, actor, timestamp, and safe field names only.
 

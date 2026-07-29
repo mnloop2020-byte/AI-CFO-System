@@ -76,9 +76,66 @@ def parse_cors_allowed_origins(
     return tuple(origins)
 
 
+def parse_rate_limit_backend(
+    raw_value: str | None,
+    *,
+    app_environment: str,
+) -> str:
+    backend = (raw_value or "memory").strip().lower()
+    if backend not in {"memory", "redis"}:
+        raise RuntimeError("RATE_LIMIT_BACKEND must be memory or redis.")
+    if app_environment in DEPLOYED_ENVIRONMENTS and backend != "redis":
+        raise RuntimeError(
+            "Pilot and production require RATE_LIMIT_BACKEND=redis."
+        )
+    return backend
+
+
+def validate_rate_limit_redis_url(
+    raw_value: str | None,
+    *,
+    backend: str,
+    app_environment: str,
+) -> str | None:
+    if backend == "memory":
+        return None
+    value = (raw_value or "").strip()
+    if not value:
+        raise RuntimeError(
+            "RATE_LIMIT_REDIS_URL is required when RATE_LIMIT_BACKEND=redis."
+        )
+    parsed = urlsplit(value)
+    if (
+        parsed.scheme not in {"redis", "rediss"}
+        or parsed.hostname is None
+        or parsed.fragment
+    ):
+        raise RuntimeError("RATE_LIMIT_REDIS_URL must be a valid Redis URL.")
+    try:
+        parsed.port
+    except ValueError as error:
+        raise RuntimeError(
+            "RATE_LIMIT_REDIS_URL must use a valid port."
+        ) from error
+    if app_environment in DEPLOYED_ENVIRONMENTS and parsed.scheme != "rediss":
+        raise RuntimeError(
+            "Pilot and production require a TLS Redis URL using rediss://."
+        )
+    return value
+
+
 APP_ENV = normalize_app_environment(os.getenv("APP_ENV"))
 CORS_ALLOWED_ORIGINS = parse_cors_allowed_origins(
     os.getenv("CORS_ALLOWED_ORIGINS"),
+    app_environment=APP_ENV,
+)
+RATE_LIMIT_BACKEND = parse_rate_limit_backend(
+    os.getenv("RATE_LIMIT_BACKEND"),
+    app_environment=APP_ENV,
+)
+RATE_LIMIT_REDIS_URL = validate_rate_limit_redis_url(
+    os.getenv("RATE_LIMIT_REDIS_URL"),
+    backend=RATE_LIMIT_BACKEND,
     app_environment=APP_ENV,
 )
 

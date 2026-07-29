@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.config.settings import (
     OPENROUTER_API_KEY,
@@ -20,11 +20,16 @@ def liveness():
 
 
 @router.get("/health/ready")
-def readiness():
+async def readiness(request: Request):
     if not all((SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, OPENROUTER_API_KEY)):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Required services are not configured.",
+        )
+    if not await request.app.state.rate_limiter.ready():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Request protection service is unavailable.",
         )
     return {"status": "ready"}
 

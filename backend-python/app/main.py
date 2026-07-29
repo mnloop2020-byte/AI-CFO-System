@@ -1,8 +1,14 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config.settings import CORS_ALLOWED_ORIGINS
-from app.middleware.security import RequestSecurityMiddleware
+from app.config.settings import (
+    CORS_ALLOWED_ORIGINS,
+    RATE_LIMIT_BACKEND,
+    RATE_LIMIT_REDIS_URL,
+)
+from app.middleware.security import RequestSecurityMiddleware, build_rate_limiter
 
 from app.routes.auth import router as auth_router
 from app.routes.audit import router as audit_router
@@ -24,7 +30,20 @@ from app.utils.logger import configure_logging
 
 
 configure_logging()
-app = FastAPI(title="AI CFO Python Backend")
+rate_limiter = build_rate_limiter(
+    backend=RATE_LIMIT_BACKEND,
+    redis_url=RATE_LIMIT_REDIS_URL,
+)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    await rate_limiter.aclose()
+
+
+app = FastAPI(title="AI CFO Python Backend", lifespan=lifespan)
+app.state.rate_limiter = rate_limiter
 
 
 app.add_middleware(
@@ -44,7 +63,7 @@ app.add_middleware(
         "Content-Type",
     ],
 )
-app.add_middleware(RequestSecurityMiddleware)
+app.add_middleware(RequestSecurityMiddleware, limiter=rate_limiter)
 
 
 app.include_router(health_router)

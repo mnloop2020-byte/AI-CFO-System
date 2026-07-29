@@ -5,6 +5,8 @@ from app.config.settings import (
     LOCAL_CORS_ALLOWED_ORIGINS,
     normalize_app_environment,
     parse_cors_allowed_origins,
+    parse_rate_limit_backend,
+    validate_rate_limit_redis_url,
 )
 from app.main import app
 
@@ -59,6 +61,49 @@ def test_cors_rejects_wildcard_or_non_origin_values(origin):
 def test_app_environment_rejects_unknown_values():
     with pytest.raises(RuntimeError, match="APP_ENV"):
         normalize_app_environment("staging-ish")
+
+
+@pytest.mark.parametrize("environment", ["pilot", "production"])
+def test_deployed_environments_require_redis_rate_limiting(environment):
+    with pytest.raises(RuntimeError, match="redis"):
+        parse_rate_limit_backend("memory", app_environment=environment)
+    assert (
+        parse_rate_limit_backend("redis", app_environment=environment)
+        == "redis"
+    )
+
+
+def test_development_can_use_in_memory_rate_limiting():
+    assert (
+        parse_rate_limit_backend(None, app_environment="development")
+        == "memory"
+    )
+
+
+def test_deployed_redis_requires_tls_and_valid_url():
+    with pytest.raises(RuntimeError, match="TLS"):
+        validate_rate_limit_redis_url(
+            "redis://cache.example.com:6379/0",
+            backend="redis",
+            app_environment="production",
+        )
+    assert (
+        validate_rate_limit_redis_url(
+            "rediss://cache.example.com:6380/0",
+            backend="redis",
+            app_environment="production",
+        )
+        == "rediss://cache.example.com:6380/0"
+    )
+
+
+def test_redis_backend_requires_a_url():
+    with pytest.raises(RuntimeError, match="required"):
+        validate_rate_limit_redis_url(
+            None,
+            backend="redis",
+            app_environment="development",
+        )
 
 
 def test_default_app_cors_allows_loopback_and_rejects_old_lan_origin():

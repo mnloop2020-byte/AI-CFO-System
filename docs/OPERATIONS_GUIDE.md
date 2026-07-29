@@ -15,6 +15,10 @@ Backend names:
 - `APP_ENV`: `development`, `test`, `pilot`, or `production`
 - `CORS_ALLOWED_ORIGINS`: comma-separated exact frontend origins; required
   with HTTPS-only values in `pilot` and `production`
+- `RATE_LIMIT_BACKEND`: use `memory` only for development/test and `redis` for
+  Pilot/Production
+- `RATE_LIMIT_REDIS_URL`: managed Redis connection URL; deployed environments
+  require TLS using `rediss://`
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` for explicitly trusted background/admin operations only
@@ -140,7 +144,10 @@ read business records, write database rows, or print secrets or response bodies.
 - TOTP MFA is implemented and verified locally. Applying its reviewed migration
   and rehearsing privileged-account recovery in the target environment remain
   Production blockers.
-- Rate limiting is in-memory per backend process; public multi-instance deployment requires a shared Redis-backed limiter.
+- Redis-backed rate limiting is implemented for multi-instance deployment.
+  Production still requires a managed TLS Redis service with monitored
+  availability and capacity. If Redis is unavailable, protected requests fail
+  closed with `503` and a short `Retry-After`.
 - Email, payment, banking, and purchasing integrations are not configured.
 - Collection cannot be attributed to AI until a verifiable payment timestamp and transaction reference exist.
 - AI output requires human review and is not a complete legal, tax, audit, or accounting substitute.

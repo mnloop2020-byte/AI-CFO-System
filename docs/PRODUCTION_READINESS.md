@@ -27,12 +27,16 @@ Last updated: 2026-07-29
   request IDs, exact CORS, frontend availability, security headers, and HSTS
 - [x] Real TOTP enrollment and `aal2` enforcement for Owner/Admin verified
   end to end against Supabase Local, including restrictive business/Storage RLS
+- [x] Redis-backed distributed rate limiter implemented with atomic counters,
+  TLS-only deployed configuration, fail-closed behavior, and a two-instance
+  local Redis integration test
 
 ## Production blockers
 
 - [ ] Apply the reviewed MFA migration to the target environment and verify
   Owner/Admin enrollment, recovery ownership, and `aal2` access before release
-- [ ] Replace process-local rate limiting with a shared Redis-backed limiter
+- [ ] Provision the managed TLS Redis service and verify distributed limits,
+  availability alerts, capacity, and outage behavior in the target environment
 - [ ] Configure the final HTTPS domain and exact `CORS_ALLOWED_ORIGINS`, then
   verify secure proxy headers and HSTS with the target-mode readiness gate
 - [ ] Run an encrypted backup and successful isolated restore rehearsal with documented checksums

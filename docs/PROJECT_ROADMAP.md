@@ -78,7 +78,7 @@ Status: **complete with conservative attribution**. All evidence-backed metrics 
 - Expanded backend/frontend tests, RLS/role tests, Arabic/English responsive checks, production build, Python compilation, and end-to-end scenarios.
 - Real MFA for privileged roles and advanced session management.
 
-Status: **Pilot-complete locally**. Audit events, route rate limits, upload/RAG safeguards, bounded external calls, structured redacted logs, health checks, LLM usage monitoring, CSP/security headers, recovery documentation, and privileged-role TOTP MFA are implemented. Shared distributed rate limiting, target application of the reviewed MFA migration, and advanced session management remain Production blockers.
+Status: **Pilot-complete locally**. Audit events, Redis-backed distributed route limits, upload/RAG safeguards, bounded external calls, structured redacted logs, health checks, LLM usage monitoring, CSP/security headers, recovery documentation, and privileged-role TOTP MFA are implemented. Provisioning the target TLS Redis service, target application of the reviewed MFA migration, and advanced session management remain Production gates.
 
 ## Phase 7: Final verification
 
@@ -98,7 +98,7 @@ deduplicated, and no internal agent JSON was exposed.
 
 Deployment requires successful Auth, RLS, Storage policies, role tests, backup verification, PDF reports, RAG, Action Center, and final end-to-end tests.
 
-Status: **documentation complete; deployment intentionally stopped**. The system is suitable for a controlled development Pilot with synthetic/non-sensitive data. Production remains blocked by target application/verification of MFA, distributed rate limiting, target-domain hardening, a real backup/restore rehearsal, centralized monitoring, and external compliance/security review.
+Status: **documentation complete; deployment intentionally stopped**. The system is suitable for a controlled development Pilot with synthetic/non-sensitive data. Production remains blocked by target application/verification of MFA, provisioning/verification of the TLS Redis service, target-domain hardening, a real backup/restore rehearsal, centralized monitoring, and external compliance/security review.
 
 Pilot environment preparation update (2026-07-29): exact CORS origins are now
 environment-configured and fail closed in deployed modes. A read-only local or
