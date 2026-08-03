@@ -76,7 +76,7 @@ export default function MfaVerificationPage() {
       const { data: enrollment, error: enrollmentError } =
         await supabase.auth.mfa.enroll({
           factorType: "totp",
-          friendlyName: "Zemam AI CFO",
+          friendlyName: `Zemam AI CFO ${Date.now()}`,
         });
       if (enrollmentError) throw enrollmentError;
       if (active) {
